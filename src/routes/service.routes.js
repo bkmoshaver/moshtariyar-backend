@@ -7,7 +7,7 @@ const express = require('express');
 const router = express.Router();
 const serviceController = require('../controllers/service.controller');
 const { authenticate, requirePermission } = require('../middleware/auth');
-const { validate } = require('../middleware/validate');
+const validate = require('../middleware/validate');
 const { createServiceSchema, getServicesSchema } = require('../validators/service.validator');
 
 // تمام مسیرها نیاز به احراز هویت دارند
