@@ -1,6 +1,6 @@
 {
   "name": "moshtariyar-backend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "مشتریار - سیستم مدیریت ارتباط با مشتری (CRM)",
   "main": "src/server.js",
   "scripts": {
