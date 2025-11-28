@@ -29,7 +29,13 @@ connectDB();
 // Middleware های امنیتی
 app.use(helmet());
 app.use(cors({
-  origin: ['http://localhost:3001', 'https://3001-igom1gnu03doppsyhtimu-646b2ab1.manusvm.computer', 'https://3000-igom1gnu03doppsyhtimu-646b2ab1.manusvm.computer'],
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://3000-ilaald7gzmqr9doccfi5v-370c944c.manusvm.computer',
+    'https://3001-igom1gnu03doppsyhtimu-646b2ab1.manusvm.computer',
+    'https://3000-igom1gnu03doppsyhtimu-646b2ab1.manusvm.computer'
+  ],
   credentials: true
 }));
 
