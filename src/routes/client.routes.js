@@ -7,7 +7,7 @@ const express = require('express');
 const router = express.Router();
 const clientController = require('../controllers/client.controller');
 const { authenticate, requirePermission } = require('../middleware/auth');
-const { validate } = require('../middleware/validate');
+const validate = require('../middleware/validate'); // ← ← این اصلاح شد
 const { 
   createClientSchema, 
   updateClientSchema, 
