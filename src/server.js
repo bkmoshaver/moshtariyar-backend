@@ -86,8 +86,10 @@ app.use(errorHandler);
 
 // راه‌اندازی سرور
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  logger.info(`🚀 سرور مشتریار در حال اجرا بر روی پورت ${PORT}`);
+const HOST = '0.0.0.0'; // ⬅ برای Railway باید به همه interface ها گوش دهد
+
+app.listen(PORT, HOST, () => {
+  logger.info(`🚀 سرور مشتریار در حال اجرا بر روی ${HOST}:${PORT}`);
   logger.info(`📝 محیط: ${process.env.NODE_ENV || 'development'}`);
 });
 
