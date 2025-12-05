@@ -19,6 +19,11 @@ const logger = pino({
  */
 const connectDB = async () => {
   try {
+    logger.info('🔍 Connecting to MongoDB...');
+    logger.info(`🔍 MONGODB_URI exists: ${!!process.env.MONGODB_URI}`);
+    logger.info(`🔍 MONGODB_URI length: ${process.env.MONGODB_URI ? process.env.MONGODB_URI.length : 0}`);
+    logger.info(`🔍 MONGODB_URI value: ${process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 30) + '...' : 'EMPTY'}`);
+    
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       // تنظیمات پیشنهادی برای production
       maxPoolSize: 10,
