@@ -43,11 +43,15 @@ const connectDB = async () => {
     });
 
   } catch (error) {
-    logger.error('❌ خطا در اتصال به MongoDB:', error.message);
+    logger.error('❌ خطا در اتصال به MongoDB:');
+    logger.error('🔍 Full error object:', JSON.stringify(error, null, 2));
+    logger.error('🔍 Error message:', error ? error.message : 'NO ERROR OBJECT');
     logger.error('📍 MongoDB URI:', process.env.MONGODB_URI ? process.env.MONGODB_URI.replace(/:\/\/([^:]+):([^@]+)@/, '://$1:****@') : 'NOT SET');
-    logger.error('🔍 کد خطا:', error.code);
-    logger.error('🔍 نام خطا:', error.name);
-    logger.error('🔍 Stack:', error.stack);
+    logger.error('🔍 Error code:', error ? error.code : 'N/A');
+    logger.error('🔍 Error name:', error ? error.name : 'N/A');
+    if (error && error.stack) {
+      logger.error('🔍 Stack:', error.stack);
+    }
     // Don't exit - let Railway restart
     // process.exit(1);
   }
