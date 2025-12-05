@@ -43,15 +43,15 @@ const connectDB = async () => {
     });
 
   } catch (error) {
-    logger.error('❌ خطا در اتصال به MongoDB:');
-    logger.error('🔍 Full error object:', JSON.stringify(error, null, 2));
-    logger.error('🔍 Error message:', error ? error.message : 'NO ERROR OBJECT');
-    logger.error('📍 MongoDB URI:', process.env.MONGODB_URI ? process.env.MONGODB_URI.replace(/:\/\/([^:]+):([^@]+)@/, '://$1:****@') : 'NOT SET');
-    logger.error('🔍 Error code:', error ? error.code : 'N/A');
-    logger.error('🔍 Error name:', error ? error.name : 'N/A');
-    if (error && error.stack) {
-      logger.error('🔍 Stack:', error.stack);
-    }
+    console.error('\n=== MONGODB CONNECTION ERROR ===');
+    console.error('Raw error:', error);
+    console.error('Error type:', typeof error);
+    console.error('Error constructor:', error ? error.constructor.name : 'N/A');
+    console.error('Error message:', error ? error.message : 'NO MESSAGE');
+    console.error('Error code:', error ? error.code : 'NO CODE');
+    console.error('Error name:', error ? error.name : 'NO NAME');
+    console.error('MONGODB_URI:', process.env.MONGODB_URI ? process.env.MONGODB_URI.replace(/:\/\/([^:]+):([^@]+)@/, '://$1:****@') : 'NOT SET');
+    console.error('================================\n');
     // Don't exit - let Railway restart
     // process.exit(1);
   }
