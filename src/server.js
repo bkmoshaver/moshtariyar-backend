@@ -64,7 +64,8 @@ app.use(cors({
     const allowedPatterns = [
       /^http:\/\/localhost(:\d+)?$/,           // localhost با هر port
       /^https:\/\/.*\.manus\.space$/,          // همه subdomain های manus.space
-      /^https:\/\/.*\.manusvm\.computer$/      // همه subdomain های manusvm.computer
+      /^https:\/\/.*\.manusvm\.computer$/,     // همه subdomain های manusvm.computer
+      /^https:\/\/.*\.manus\.im$/              // همه subdomain های manus.im (Management UI)
     ];
     
     // بررسی اینکه origin با یکی از pattern ها match می‌کند یا نه
