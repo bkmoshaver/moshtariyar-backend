@@ -1,11 +1,13 @@
 /**
  * Service Controller
- * مدیریت سرویس‌ها و ثبت خدمات
+ * کنترلر مدیریت سرویس‌ها
  */
 
-const { Service, Client, Tenant } = require('../models');
-const { successResponse, errorResponse, ErrorCodes } = require('../utils/errorResponse');
-const { smsQueue } = require('../config/queue');
+const Service = require('../models/Service');
+const Client = require('../models/Client');
+const { successResponse, errorResponse } = require('../utils/responseFormatter');
+const { ErrorCodes } = require('../utils/errors');
+const { sendSMS } = require('../services/sms.service');
 
 /**
  * دریافت لیست سرویس‌ها
@@ -13,23 +15,11 @@ const { smsQueue } = require('../config/queue');
  */
 const getServices = async (req, res, next) => {
   try {
-    const { 
-      page = 1, 
-      limit = 20, 
-      clientId, 
-      staffId, 
-      startDate, 
-      endDate,
-      sortBy = 'serviceDate',
-      order = 'desc'
-    } = req.query;
+    const { clientId, startDate, endDate, page = 1, limit = 50 } = req.query;
 
-    // ساخت query
     const query = {};
     if (req.tenantId) query.tenant = req.tenantId;
-    
     if (clientId) query.client = clientId;
-    if (staffId) query.staff = staffId;
     
     if (startDate || endDate) {
       query.serviceDate = {};
@@ -37,51 +27,28 @@ const getServices = async (req, res, next) => {
       if (endDate) query.serviceDate.$lte = new Date(endDate);
     }
 
-    // محاسبه pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const sortOrder = order === 'desc' ? -1 : 1;
+    const skip = (page - 1) * limit;
 
-    // دریافت سرویس‌ها
-    const services = await Service.find(query)
-      .populate('client', 'name phone')
-      .populate('staff', 'name')
-      .sort({ [sortBy]: sortOrder })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .select('-__v');
-
-    // تعداد کل
-    const total = await Service.countDocuments(query);
-
-    // محاسبه آمار
-    const stats = await Service.aggregate([
-      { $match: query },
-      {
-        $group: {
-          _id: null,
-          totalAmount: { $sum: '$amount' },
-          totalGifts: { $sum: '$gift.amount' },
-          totalFinal: { $sum: '$finalAmount' }
-        }
-      }
+    const [services, total] = await Promise.all([
+      Service.find(query)
+        .populate('client', 'name phone wallet')
+        .populate('staff', 'name phone')
+        .populate('tenant', 'name')
+        .sort({ serviceDate: -1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
+      Service.countDocuments(query)
     ]);
 
-    res.json(
-      successResponse({
-        services,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total,
-          pages: Math.ceil(total / parseInt(limit))
-        },
-        stats: stats[0] || {
-          totalAmount: 0,
-          totalGifts: 0,
-          totalFinal: 0
-        }
-      })
-    );
+    res.json(successResponse({
+      services,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    }));
 
   } catch (error) {
     next(error);
@@ -89,15 +56,17 @@ const getServices = async (req, res, next) => {
 };
 
 /**
- * دریافت یک سرویس
+ * دریافت جزئیات یک سرویس
  * GET /api/services/:id
  */
-const getService = async (req, res, next) => {
+const getServiceById = async (req, res, next) => {
   try {
-    const service = await Service.findOne({
-      _id: req.params.id,
-      tenant: req.tenantId
-    })
+    const { id } = req.params;
+
+    const query = { _id: id };
+    if (req.tenantId) query.tenant = req.tenantId;
+
+    const service = await Service.findOne(query)
       .populate('client', 'name phone wallet')
       .populate('staff', 'name phone')
       .populate('tenant', 'name giftSettings');
@@ -133,6 +102,20 @@ const createService = async (req, res, next) => {
       return res.status(404).json(
         errorResponse(ErrorCodes.NOT_FOUND, 'مشتری یافت نشد')
       );
+    }
+
+    // ✅ اطمینان از وجود wallet و gifts
+    if (!client.wallet) {
+      client.wallet = {
+        balance: 0,
+        totalGifts: 0,
+        totalUsed: 0,
+        totalSpent: 0,
+        gifts: []
+      };
+    }
+    if (!client.wallet.gifts) {
+      client.wallet.gifts = [];
     }
 
     // تنظیمات هدیه (پیش‌فرض 10% و 30 روز)
@@ -248,85 +231,31 @@ const createService = async (req, res, next) => {
       });
     }
 
-    // ارسال پیامک فوری (IMMEDIATE_SMS)
+    // ارسال پیامک
     try {
-      if (smsQueue) {
-        // استفاده از Queue
-        await smsQueue.add('IMMEDIATE_SMS', {
-          type: 'IMMEDIATE_SMS',
-          data: {
-            phone: client.phone,
-            name: client.name,
-            amount: finalAmount,
-            gift: giftAmount,
-            balance: client.wallet.balance,
-            businessName: process.env.BUSINESS_NAME || 'مشتریار'
-          }
-        });
-        console.log(`✅ Immediate SMS queued for ${client.phone}`);
-      } else {
-        // ارسال مستقیم بدون Queue
-        const smsService = require('../services/sms');
-        await smsService.sendServiceSMS({
-          phone: client.phone,
-          name: client.name,
-          amount: finalAmount,
-          gift: giftAmount,
-          balance: client.wallet.balance,
-          businessName: process.env.BUSINESS_NAME || 'مشتریار'
-        });
-        console.log(`✅ Immediate SMS sent directly to ${client.phone}`);
-      }
+      const smsText = `${client.name} عزیز، خدمت شما با موفقیت ثبت شد.\n` +
+        `مبلغ: ${amount.toLocaleString()} تومان\n` +
+        (walletUsedAmount > 0 ? `کسر از کیف پول: ${walletUsedAmount.toLocaleString()} تومان\n` : '') +
+        `مبلغ پرداختی: ${finalAmount.toLocaleString()} تومان\n` +
+        (giftAmount > 0 ? `هدیه: ${giftAmount.toLocaleString()} تومان به کیف پول شما اضافه شد.\n` : '') +
+        `موجودی کیف پول: ${client.wallet.balance.toLocaleString()} تومان`;
+
+      await sendSMS(client.phone, smsText);
     } catch (smsError) {
-      console.error('❌ Failed to send immediate SMS:', smsError.message);
-      // Don't fail the request if SMS fails
+      console.error('خطا در ارسال پیامک:', smsError);
+      // ادامه می‌دهیم حتی اگر پیامک ارسال نشود
     }
 
-    // ارسال پیامک نظرسنجی با تأخیر 60 دقیقه (DELAYED_SURVEY_SMS)
-    try {
-      const surveyLink = `${process.env.FRONTEND_URL || 'https://moshtariyar.com'}/survey/${service._id}`;
-      
-      if (smsQueue) {
-        // استفاده از Queue با تأخیر
-        await smsQueue.add(
-          'DELAYED_SURVEY_SMS',
-          {
-            type: 'DELAYED_SURVEY_SMS',
-            data: {
-              phone: client.phone,
-              name: client.name,
-              surveyLink,
-              businessName: process.env.BUSINESS_NAME || 'مشتریار'
-            }
-          },
-          {
-            delay: 60 * 60 * 1000 // 60 minutes in milliseconds
-          }
-        );
-        console.log(`✅ Survey SMS scheduled for ${client.phone} (60 min delay)`);
-      } else {
-        // بدون Queue - فعلاً ارسال نظرسنجی غیرفعال است
-        console.log(`ℹ️  Survey SMS skipped (Redis not available) for ${client.phone}`);
-        // می‌توانید بعداً با setTimeout ارسال کنید
-      }
-    } catch (smsError) {
-      console.error('❌ Failed to send survey SMS:', smsError.message);
-      // Don't fail the request if SMS fails
-    }
+    // بازگشت سرویس با اطلاعات کامل
+    const populatedService = await Service.findById(service._id)
+      .populate('client', 'name phone wallet')
+      .populate('staff', 'name phone')
+      .populate('tenant', 'name');
 
-    // بارگذاری اطلاعات کامل
-    await service.populate('client', 'name phone email wallet');
-
-    res.status(201).json(
-      successResponse({ 
-        service,
-        walletDeduction: {
-          used: walletUsedAmount,
-          gifts: usedGifts,
-          newBalance: client.wallet.balance
-        }
-      }, 'سرویس با موفقیت ثبت شد')
-    );
+    res.status(201).json(successResponse({
+      service: populatedService,
+      message: 'سرویس با موفقیت ثبت شد'
+    }));
 
   } catch (error) {
     next(error);
@@ -339,17 +268,12 @@ const createService = async (req, res, next) => {
  */
 const deleteService = async (req, res, next) => {
   try {
-    // فقط مالک و مدیر می‌توانند سرویس حذف کنند
-    if (req.staff && !['owner', 'manager'].includes(req.staff.role)) {
-      return res.status(403).json(
-        errorResponse(ErrorCodes.FORBIDDEN, 'شما دسترسی به حذف سرویس ندارید')
-      );
-    }
+    const { id } = req.params;
 
-    const service = await Service.findOne({
-      _id: req.params.id,
-      tenant: req.tenantId
-    });
+    const query = { _id: id };
+    if (req.tenantId) query.tenant = req.tenantId;
+
+    const service = await Service.findOne(query);
 
     if (!service) {
       return res.status(404).json(
@@ -357,12 +281,11 @@ const deleteService = async (req, res, next) => {
       );
     }
 
-    // حذف سرویس
     await service.deleteOne();
 
-    res.json(
-      successResponse(null, 'سرویس با موفقیت حذف شد')
-    );
+    res.json(successResponse({
+      message: 'سرویس با موفقیت حذف شد'
+    }));
 
   } catch (error) {
     next(error);
@@ -371,7 +294,7 @@ const deleteService = async (req, res, next) => {
 
 module.exports = {
   getServices,
-  getService,
+  getServiceById,
   createService,
   deleteService
 };
