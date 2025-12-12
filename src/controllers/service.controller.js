@@ -3,7 +3,7 @@
  * کنترلر مدیریت سرویس‌ها
  */
 
-const { Service, Client, Tenant } = require('../models');
+const { Service, Client, Tenant, Settings } = require('../models');
 const { successResponse, errorResponse, ErrorCodes } = require('../utils/errorResponse');
 const { smsQueue } = require('../config/queue');
 
@@ -116,9 +116,11 @@ const createService = async (req, res, next) => {
       client.wallet.gifts = [];
     }
 
-    // تنظیمات هدیه (پیش‌فرض 10% و 30 روز)
-    const giftPercentage = 10;
-    const giftExpiryDays = 30;
+    // دریافت تنظیمات هدیه از Settings
+    const tenantId = req.tenantId || req.userId;
+    const settings = await Settings.findOne({ tenant: tenantId });
+    const giftPercentage = settings?.giftPercentage || 10;
+    const giftExpiryDays = settings?.walletExpiryDays || 365;
 
     // کسر خودکار کیف پول (FIFO - قدیمی‌ترین هدایا اول)
     let walletUsedAmount = 0;
