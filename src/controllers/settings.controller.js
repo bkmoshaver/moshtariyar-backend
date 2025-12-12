@@ -12,13 +12,21 @@ const { successResponse, errorResponse, ErrorCodes } = require('../utils/errorRe
  */
 const getSettings = async (req, res, next) => {
   try {
+    console.log('🔍 [GET-1] getSettings started');
+    console.log('🔍 [GET-2] req.user:', req.user);
+    console.log('🔍 [GET-3] req.userId:', req.userId);
+    
     // برای MVP: از userId به عنوان tenant استفاده می‌کنیم
     const tenantId = req.user.tenant || req.userId;
+    console.log('🔍 [GET-4] tenantId:', tenantId);
     
+    console.log('🔍 [GET-5] Starting Settings.findOne...');
     let settings = await Settings.findOne({ tenant: tenantId });
+    console.log('🔍 [GET-6] Settings.findOne completed. Found:', !!settings);
     
     // اگر تنظیمات وجود ندارد، با مقادیر پیش‌فرض بساز
     if (!settings) {
+      console.log('🔍 [GET-7] Creating default settings...');
       settings = await Settings.create({
         tenant: tenantId,
         giftPercentage: 10,
@@ -28,8 +36,10 @@ const getSettings = async (req, res, next) => {
         smsOnWalletLow: false,
         businessName: 'مشتریار'
       });
+      console.log('✅ [GET-8] Default settings created');
     }
     
+    console.log('✅ [GET-9] Sending success response');
     return successResponse(res, settings, 'تنظیمات با موفقیت دریافت شد');
   } catch (error) {
     console.error('❌ خطا در دریافت تنظیمات:', error);
