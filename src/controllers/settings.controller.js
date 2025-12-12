@@ -12,7 +12,8 @@ const { successResponse, errorResponse, ErrorCodes } = require('../utils/errorRe
  */
 const getSettings = async (req, res, next) => {
   try {
-    const tenantId = req.user.tenant;
+    // برای MVP: از userId به عنوان tenant استفاده می‌کنیم
+    const tenantId = req.user.tenant || req.userId;
     
     let settings = await Settings.findOne({ tenant: tenantId });
     
