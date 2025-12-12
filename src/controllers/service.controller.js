@@ -37,7 +37,7 @@ const getServices = async (req, res, next) => {
         .limit(parseInt(limit)),
       Service.countDocuments(query)
     ]);
-
+ 
     res.json(successResponse({
       services,
       pagination: {
