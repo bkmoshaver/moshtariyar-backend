@@ -37,7 +37,7 @@ const getServices = async (req, res, next) => {
         .limit(parseInt(limit)),
       Service.countDocuments(query)
     ]);
- 
+
     res.json(successResponse({
       services,
       pagination: {
@@ -159,9 +159,14 @@ const createService = async (req, res, next) => {
 
     // محاسبه مبلغ نهایی
     const finalAmount = amount - walletUsedAmount;
+    console.log('🔍 [SERVICE-1] amount:', amount);
+    console.log('🔍 [SERVICE-2] walletUsedAmount:', walletUsedAmount);
+    console.log('🔍 [SERVICE-3] finalAmount:', finalAmount);
+    console.log('🔍 [SERVICE-4] giftPercentage:', giftPercentage);
 
     // محاسبه هدیه جدید (بر اساس مبلغ پرداختی واقعی)
     const giftAmount = Math.floor(finalAmount * (giftPercentage / 100));
+    console.log('🔍 [SERVICE-5] giftAmount:', giftAmount);
 
     // ایجاد سرویس
     const serviceData = {
