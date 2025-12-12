@@ -53,14 +53,30 @@ if (redisConnection) {
 
 // Middleware های امنیتی
 app.use(helmet());
+
+// CORS Configuration - قبول همه domain های manus.space و localhost
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'https://3000-ilaald7gzmqr9doccfi5v-370c944c.manusvm.computer',
-    'https://3001-igom1gnu03doppsyhtimu-646b2ab1.manusvm.computer',
-    'https://3000-igom1gnu03doppsyhtimu-646b2ab1.manusvm.computer'
-  ],
+  origin: function (origin, callback) {
+    // اگر origin وجود نداشت (مثلاً Postman)، قبول کن
+    if (!origin) return callback(null, true);
+    
+    // لیست pattern های مجاز
+    const allowedPatterns = [
+      /^http:\/\/localhost(:\d+)?$/,           // localhost با هر port
+      /^https:\/\/.*\.manus\.space$/,          // همه subdomain های manus.space
+      /^https:\/\/.*\.manusvm\.computer$/      // همه subdomain های manusvm.computer
+    ];
+    
+    // بررسی اینکه origin با یکی از pattern ها match می‌کند یا نه
+    const isAllowed = allowedPatterns.some(pattern => pattern.test(origin));
+    
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      logger.warn(`⚠️  CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
