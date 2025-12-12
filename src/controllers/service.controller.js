@@ -3,11 +3,9 @@
  * کنترلر مدیریت سرویس‌ها
  */
 
-const Service = require('../models/Service');
-const Client = require('../models/Client');
-const { successResponse, errorResponse } = require('../utils/responseFormatter');
-const { ErrorCodes } = require('../utils/errors');
-const { sendSMS } = require('../services/sms.service');
+const { Service, Client, Tenant } = require('../models');
+const { successResponse, errorResponse, ErrorCodes } = require('../utils/errorResponse');
+const { smsQueue } = require('../config/queue');
 
 /**
  * دریافت لیست سرویس‌ها
@@ -231,18 +229,37 @@ const createService = async (req, res, next) => {
       });
     }
 
-    // ارسال پیامک
+    // ارسال پیامک فوری (IMMEDIATE_SMS)
     try {
-      const smsText = `${client.name} عزیز، خدمت شما با موفقیت ثبت شد.\n` +
-        `مبلغ: ${amount.toLocaleString()} تومان\n` +
-        (walletUsedAmount > 0 ? `کسر از کیف پول: ${walletUsedAmount.toLocaleString()} تومان\n` : '') +
-        `مبلغ پرداختی: ${finalAmount.toLocaleString()} تومان\n` +
-        (giftAmount > 0 ? `هدیه: ${giftAmount.toLocaleString()} تومان به کیف پول شما اضافه شد.\n` : '') +
-        `موجودی کیف پول: ${client.wallet.balance.toLocaleString()} تومان`;
-
-      await sendSMS(client.phone, smsText);
+      if (smsQueue) {
+        // استفاده از Queue
+        await smsQueue.add('IMMEDIATE_SMS', {
+          type: 'IMMEDIATE_SMS',
+          data: {
+            phone: client.phone,
+            name: client.name,
+            amount: finalAmount,
+            gift: giftAmount,
+            balance: client.wallet.balance,
+            businessName: process.env.BUSINESS_NAME || 'مشتریار'
+          }
+        });
+        console.log(`✅ Immediate SMS queued for ${client.phone}`);
+      } else {
+        // ارسال مستقیم بدون Queue
+        const smsService = require('../services/sms');
+        await smsService.sendServiceSMS({
+          phone: client.phone,
+          name: client.name,
+          amount: finalAmount,
+          gift: giftAmount,
+          balance: client.wallet.balance,
+          businessName: process.env.BUSINESS_NAME || 'مشتریار'
+        });
+        console.log(`✅ Immediate SMS sent directly to ${client.phone}`);
+      }
     } catch (smsError) {
-      console.error('خطا در ارسال پیامک:', smsError);
+      console.error('❌ خطا در ارسال پیامک:', smsError);
       // ادامه می‌دهیم حتی اگر پیامک ارسال نشود
     }
 
