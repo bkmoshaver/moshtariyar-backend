@@ -57,7 +57,7 @@ const getServices = async (req, res, next) => {
  * دریافت جزئیات یک سرویس
  * GET /api/services/:id
  */
-const getServiceById = async (req, res, next) => {
+const getService = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -311,7 +311,7 @@ const deleteService = async (req, res, next) => {
 
 module.exports = {
   getServices,
-  getServiceById,
+  getService,
   createService,
   deleteService
 };
