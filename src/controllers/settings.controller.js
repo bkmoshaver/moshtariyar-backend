@@ -40,7 +40,7 @@ const getSettings = async (req, res, next) => {
     }
     
     console.log('✅ [GET-9] Sending success response');
-    return successResponse(res, settings, 'تنظیمات با موفقیت دریافت شد');
+    return res.json(successResponse(settings, 'تنظیمات با موفقیت دریافت شد'));
   } catch (error) {
     console.error('❌ خطا در دریافت تنظیمات:', error);
     next(error);
@@ -118,7 +118,7 @@ const updateSettings = async (req, res, next) => {
     }
     
     console.log('✅ [15] Sending success response');
-    return successResponse(res, settings, 'تنظیمات با موفقیت به‌روزرسانی شد');
+    return res.json(successResponse(settings, 'تنظیمات با موفقیت به‌روزرسانی شد'));
   } catch (error) {
     console.error('❌ خطا در به‌روزرسانی تنظیمات:', error);
     console.error('❌ Error stack:', error.stack);
