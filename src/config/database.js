@@ -24,12 +24,15 @@ const connectDB = async () => {
     logger.info(`🔍 MONGODB_URI length: ${process.env.MONGODB_URI ? process.env.MONGODB_URI.length : 0}`);
     logger.info(`🔍 MONGODB_URI value: ${process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 30) + '...' : 'EMPTY'}`);
     
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      // تنظیمات پیشنهادی برای production
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
+const conn = await mongoose.connect(process.env.MONGODB_URI, {
+  maxPoolSize: 10,
+  minPoolSize: 2,
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 10000,
+  connectTimeoutMS: 10000,
+  keepAlive: true,
+  keepAliveInitialDelay: 300000
+});
 
     logger.info(`✅ MongoDB متصل شد: ${conn.connection.host}`);
     
