@@ -14,3 +14,12 @@ module.exports = {
   Client,
   Service
 };
+
+const Settings = require('./Settings');
+
+module.exports = {
+  Client,
+  Service,
+  Tenant,
+  Settings  // ⬅ اضافه کنید
+};

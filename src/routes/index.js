@@ -22,3 +22,9 @@ router.use('/services', serviceRoutes);
 router.use('/seed', seedRoutes);
 
 module.exports = router;
+
+const settingsRoutes = require('./settings.routes');
+
+// ... بقیه routes
+
+router.use('/settings', settingsRoutes);  // ⬅ اضافه کنید
