@@ -42,7 +42,7 @@ const getSettings = async (req, res, next) => {
  */
 const updateSettings = async (req, res, next) => {
   try {
-    const tenantId = req.user.tenant;
+    const tenantId = req.user.tenant || req.userId;
     const {
       giftPercentage,
       walletExpiryDays,
