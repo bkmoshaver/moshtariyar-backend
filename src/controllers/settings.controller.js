@@ -43,7 +43,13 @@ const getSettings = async (req, res, next) => {
  */
 const updateSettings = async (req, res, next) => {
   try {
+    console.log('🔍 [1] updateSettings started');
+    console.log('🔍 [2] req.user:', req.user);
+    console.log('🔍 [3] req.userId:', req.userId);
+    
     const tenantId = req.user.tenant || req.userId;
+    console.log('🔍 [4] tenantId:', tenantId);
+    
     const {
       giftPercentage,
       walletExpiryDays,
@@ -53,19 +59,28 @@ const updateSettings = async (req, res, next) => {
       businessName
     } = req.body;
     
+    console.log('🔍 [5] Request body:', req.body);
+    
     // اعتبارسنجی
     if (giftPercentage !== undefined && (giftPercentage < 0 || giftPercentage > 100)) {
+      console.log('❌ [6] Validation failed: giftPercentage');
       return errorResponse(res, 'درصد هدیه باید بین 0 تا 100 باشد', ErrorCodes.VALIDATION_ERROR);
     }
     
     if (walletExpiryDays !== undefined && walletExpiryDays < 1) {
+      console.log('❌ [7] Validation failed: walletExpiryDays');
       return errorResponse(res, 'مدت اعتبار کیف پول باید حداقل 1 روز باشد', ErrorCodes.VALIDATION_ERROR);
     }
+    
+    console.log('🔍 [8] Starting Settings.findOne...');
     
     // پیدا کردن و به‌روزرسانی تنظیمات
     let settings = await Settings.findOne({ tenant: tenantId });
     
+    console.log('🔍 [9] Settings.findOne completed. Found:', !!settings);
+    
     if (!settings) {
+      console.log('🔍 [10] Creating new settings...');
       // ساخت تنظیمات جدید
       settings = await Settings.create({
         tenant: tenantId,
@@ -76,21 +91,27 @@ const updateSettings = async (req, res, next) => {
         smsOnWalletLow: smsOnWalletLow !== undefined ? smsOnWalletLow : false,
         businessName: businessName || 'مشتریار'
       });
+      console.log('✅ [11] New settings created');
     } else {
+      console.log('🔍 [12] Updating existing settings...');
       // به‌روزرسانی تنظیمات موجود
       if (giftPercentage !== undefined) settings.giftPercentage = giftPercentage;
       if (walletExpiryDays !== undefined) settings.walletExpiryDays = walletExpiryDays;
       if (smsEnabled !== undefined) settings.smsEnabled = smsEnabled;
-      if (smsOnService !== undefined) settings.smsOnService = smsOnService;
+      if (smsOnService !== undefined) smsOnService : settings.smsOnService = smsOnService;
       if (smsOnWalletLow !== undefined) settings.smsOnWalletLow = smsOnWalletLow;
       if (businessName !== undefined) settings.businessName = businessName;
       
+      console.log('🔍 [13] Calling settings.save()...');
       await settings.save();
+      console.log('✅ [14] settings.save() completed');
     }
     
+    console.log('✅ [15] Sending success response');
     return successResponse(res, settings, 'تنظیمات با موفقیت به‌روزرسانی شد');
   } catch (error) {
     console.error('❌ خطا در به‌روزرسانی تنظیمات:', error);
+    console.error('❌ Error stack:', error.stack);
     next(error);
   }
 };
