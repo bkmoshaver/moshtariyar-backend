@@ -24,15 +24,18 @@ const connectDB = async () => {
     logger.info(`🔍 MONGODB_URI length: ${process.env.MONGODB_URI ? process.env.MONGODB_URI.length : 0}`);
     logger.info(`🔍 MONGODB_URI value: ${process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 30) + '...' : 'EMPTY'}`);
     
-const conn = await mongoose.connect(process.env.MONGODB_URI, {
-  maxPoolSize: 10,
-  minPoolSize: 2,
-  serverSelectionTimeoutMS: 10000,
-  socketTimeoutMS: 30000,
-  connectTimeoutMS: 30000,
-  keepAlive: true,
-  keepAliveInitialDelay: 300000
-});
+    // تنظیمات بهینه برای MongoDB Atlas و Railway
+    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+      maxPoolSize: 10,
+      minPoolSize: 2,
+      serverSelectionTimeoutMS: 30000,  // 30 ثانیه برای انتخاب سرور
+      socketTimeoutMS: 45000,            // 45 ثانیه برای عملیات
+      connectTimeoutMS: 30000,           // 30 ثانیه برای اتصال اولیه
+      heartbeatFrequencyMS: 10000,       // چک کردن اتصال هر 10 ثانیه
+      retryWrites: true,
+      retryReads: true,
+      maxIdleTimeMS: 60000,              // بستن connection های idle بعد از 60 ثانیه
+    });
 
     logger.info(`✅ MongoDB متصل شد: ${conn.connection.host}`);
     
@@ -43,6 +46,10 @@ const conn = await mongoose.connect(process.env.MONGODB_URI, {
 
     mongoose.connection.on('disconnected', () => {
       logger.warn('⚠️  MongoDB قطع شد');
+    });
+
+    mongoose.connection.on('reconnected', () => {
+      logger.info('✅ MongoDB دوباره متصل شد');
     });
 
   } catch (error) {
