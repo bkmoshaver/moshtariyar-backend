@@ -6,8 +6,9 @@
 const express = require('express');
 const router = express.Router();
 const clientController = require('../controllers/client.controller');
+const transactionController = require('../controllers/transaction.controller'); // ✅ اضافه شد
 const { authenticate, requirePermission } = require('../middleware/auth');
-const validate = require('../middleware/validate'); // ← ← این اصلاح شد
+const validate = require('../middleware/validate');
 const { 
   createClientSchema, 
   updateClientSchema, 
@@ -78,9 +79,11 @@ router.post(
   clientController.addBalance
 );
 
-module.exports = router;
 /**
- 
- * @desc    تراکنش کیف پول
-router.get('/:clientId/transactions', transactionController.getClientTransactions);
+ * @route   GET /api/clients/:clientId/transactions
+ * @desc    دریافت تاریخچه تراکنش‌های کیف پول
+ * @access  Private
+ */
+router.get('/:clientId/transactions', transactionController.getClientTransactions); // ✅ اضافه شد (قبل از اکسپورت)
 
+module.exports = router;
