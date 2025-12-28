@@ -88,7 +88,7 @@ const getService = async (req, res, next) => {
  */
 const createService = async (req, res, next) => {
   try {
-    const { clientId, title, description, amount, notes } = req.body;
+    const { clientId, title, description, amount, notes, useWallet = true } = req.body;
 
     // یافتن مشتری
     const query = { _id: clientId };
@@ -126,18 +126,22 @@ const createService = async (req, res, next) => {
     let walletUsedAmount = 0;
     const usedGifts = [];
 
-    if (client.wallet.balance > 0 && amount > 0) {
-      let remainingAmount = amount;
+    // فقط اگر useWallet فعال باشد و موجودی داشته باشد
+    if (useWallet && client.wallet.balance > 0 && amount > 0) {
+      // 1. محاسبه مقدار قابل کسر (حداکثر به اندازه موجودی یا مبلغ سرویس)
+      walletUsedAmount = Math.min(client.wallet.balance, amount);
       
-      // مرتب‌سازی هدایا بر اساس تاریخ (FIFO)
+      let remainingToDeduct = walletUsedAmount;
+      
+      // 2. تلاش برای کسر از رکوردهای هدیه (برای تاریخچه دقیق)
       const activeGifts = client.wallet.gifts
         .filter(g => g.balance > 0 && (!g.expiresAt || g.expiresAt > new Date()))
         .sort((a, b) => a.createdAt - b.createdAt);
 
       for (const gift of activeGifts) {
-        if (remainingAmount <= 0) break;
+        if (remainingToDeduct <= 0) break;
 
-        const useAmount = Math.min(gift.balance, remainingAmount);
+        const useAmount = Math.min(gift.balance, remainingToDeduct);
         
         gift.balance -= useAmount;
         gift.used += useAmount;
@@ -148,13 +152,16 @@ const createService = async (req, res, next) => {
           remainingBalance: gift.balance
         });
 
-        walletUsedAmount += useAmount;
-        remainingAmount -= useAmount;
+        remainingToDeduct -= useAmount;
       }
 
-      // به‌روزرسانی موجودی کل کیف پول
+      // 3. کسر نهایی از موجودی کل (همیشه انجام شود، حتی اگر هدیه‌ای پیدا نشد)
+      // این خط تضمین می‌کند که موجودی‌های دستی یا قدیمی هم کسر شوند
       client.wallet.balance -= walletUsedAmount;
       client.wallet.totalUsed += walletUsedAmount;
+      
+      // جلوگیری از منفی شدن موجودی (محض اطمینان)
+      if (client.wallet.balance < 0) client.wallet.balance = 0;
     }
 
     // محاسبه مبلغ نهایی
@@ -164,8 +171,9 @@ const createService = async (req, res, next) => {
     console.log('🔍 [SERVICE-3] finalAmount:', finalAmount);
     console.log('🔍 [SERVICE-4] giftPercentage:', giftPercentage);
 
-    // محاسبه هدیه جدید (بر اساس مبلغ پرداختی واقعی)
-    const giftAmount = Math.floor(finalAmount * (giftPercentage / 100));
+    // محاسبه هدیه جدید (بر اساس مبلغ کل خدمت - نه مبلغ نهایی)
+    // ✅ اصلاح شده: استفاده از amount به جای finalAmount
+    const giftAmount = Math.floor(amount * (giftPercentage / 100));
     console.log('🔍 [SERVICE-5] giftAmount:', giftAmount);
 
     // ایجاد سرویس
