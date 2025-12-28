@@ -3,18 +3,18 @@
  * Export تمام مدل‌ها از یک فایل
  */
 
-const Client = require('./client.model');
-const Service = require('./service.model');
-const Tenant = require('./tenant.model');
-const User = require('./user.model');
-const Settings = require('./settings.model');
-const Transaction = require('./transaction.model');
+const Tenant = require('./Tenant');
+const Staff = require('./Staff');
+const Client = require('./Client');
+const Service = require('./Service');
+const Settings = require('./Settings');
+const Transaction = require('./transaction.model'); // فایلی که من دادم این نام را داشت
 
 module.exports = {
+  Tenant,
+  Staff,
   Client,
   Service,
-  Tenant,
-  User,
   Settings,
   Transaction
 };
