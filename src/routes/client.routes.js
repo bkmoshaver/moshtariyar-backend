@@ -79,3 +79,8 @@ router.post(
 );
 
 module.exports = router;
+/**
+ 
+ * @desc    تراکنش کیف پول
+router.get('/:clientId/transactions', transactionController.getClientTransactions);
+
