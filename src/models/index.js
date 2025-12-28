@@ -3,23 +3,18 @@
  * Export تمام مدل‌ها از یک فایل
  */
 
-const Tenant = require('./Tenant');
-const Staff = require('./Staff');
-const Client = require('./Client');
-const Service = require('./Service');
-
-module.exports = {
-  Tenant,
-  Staff,
-  Client,
-  Service
-};
-
-const Settings = require('./Settings');
+const Client = require('./client.model');
+const Service = require('./service.model');
+const Tenant = require('./tenant.model');
+const User = require('./user.model');
+const Settings = require('./settings.model');
+const Transaction = require('./transaction.model');
 
 module.exports = {
   Client,
   Service,
   Tenant,
-  Settings  // ⬅ اضافه کنید
+  User,
+  Settings,
+  Transaction
 };
