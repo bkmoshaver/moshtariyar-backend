@@ -14,8 +14,8 @@ const { successResponse, errorResponse, ErrorCodes } = require('../utils/errorRe
  * همزمان Tenant و User (Admin) می‌سازد
  */
 exports.registerTenant = async (req, res, next) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  // const session = await mongoose.startSession();
+  // session.startTransaction();
 
   try {
     const { 
@@ -27,9 +27,9 @@ exports.registerTenant = async (req, res, next) => {
     } = req.body;
 
     // ۱. بررسی تکراری نبودن ایمیل
-    const existingUser = await User.findOne({ email }).session(session);
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
-      await session.abortTransaction();
+      // await session.abortTransaction();
       return res.status(400).json(
         errorResponse(ErrorCodes.DUPLICATE_ENTRY, 'این ایمیل قبلاً ثبت شده است')
       );
@@ -43,7 +43,7 @@ exports.registerTenant = async (req, res, next) => {
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // ۳۰ روز اعتبار اولیه
       }
     });
-    await tenant.save({ session });
+    await tenant.save();
 
     // ۳. ایجاد مدیر مجموعه (Tenant Admin)
     const user = new User({
@@ -53,9 +53,9 @@ exports.registerTenant = async (req, res, next) => {
       role: 'tenant_admin',
       tenant: tenant._id // اتصال کاربر به مجموعه
     });
-    await user.save({ session });
+    await user.save();
 
-    await session.commitTransaction();
+    // await session.commitTransaction();
 
     // ۴. ارسال پاسخ موفقیت
     res.status(201).json(
@@ -75,10 +75,10 @@ exports.registerTenant = async (req, res, next) => {
     );
 
   } catch (error) {
-    await session.abortTransaction();
+    // await session.abortTransaction();
     next(error);
   } finally {
-    session.endSession();
+    // session.endSession();
   }
 };
 

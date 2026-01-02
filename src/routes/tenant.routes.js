@@ -8,15 +8,17 @@ const router = express.Router();
 const tenantController = require('../controllers/tenant.controller');
 const { authenticate } = require('../middleware/auth');
 const validate = require('../middleware/validate');
-const Joi = require('joi');
+const { z } = require('zod');
 
-// اعتبارسنجی ورودی ثبت‌نام
-const registerSchema = Joi.object({
-  businessName: Joi.string().required().min(3).max(100).messages({'any.required': 'نام کسب‌وکار الزامی است'}),
-  name: Joi.string().required().min(3).max(100).messages({'any.required': 'نام مدیر الزامی است'}),
-  email: Joi.string().email().required().messages({'string.email': 'ایمیل نامعتبر است'}),
-  password: Joi.string().min(6).required().messages({'string.min': 'رمز عبور باید حداقل ۶ کاراکتر باشد'}),
-  phone: Joi.string().pattern(/^09\d{9}$/).optional()
+// اعتبارسنجی ورودی ثبت‌نام با Zod
+const registerSchema = z.object({
+  body: z.object({
+    businessName: z.string().min(3, 'نام کسب‌وکار باید حداقل ۳ کاراکتر باشد').max(100),
+    name: z.string().min(3, 'نام مدیر باید حداقل ۳ کاراکتر باشد').max(100),
+    email: z.string().email('ایمیل نامعتبر است'),
+    password: z.string().min(6, 'رمز عبور باید حداقل ۶ کاراکتر باشد'),
+    phone: z.string().regex(/^09\d{9}$/, 'شماره موبایل نامعتبر است').optional()
+  })
 });
 
 /**
