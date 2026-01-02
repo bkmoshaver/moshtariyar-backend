@@ -16,6 +16,7 @@ const authenticate = async (req, res, next) => {
     const token = extractToken(req.headers.authorization);
     
     if (!token) {
+      console.log('❌ [AUTH] No token found in headers');
       return res.status(401).json(
         errorResponse(ErrorCodes.UNAUTHORIZED, 'توکن یافت نشد. لطفاً وارد شوید')
       );
@@ -25,7 +26,9 @@ const authenticate = async (req, res, next) => {
     let decoded;
     try {
       decoded = verifyAccessToken(token);
+      console.log('✅ [AUTH] Token decoded:', decoded);
     } catch (error) {
+      console.log('❌ [AUTH] Token verification failed:', error.message);
       return res.status(401).json(
         errorResponse(ErrorCodes.TOKEN_EXPIRED, 'توکن منقضی شده است')
       );
@@ -41,13 +44,17 @@ const authenticate = async (req, res, next) => {
       const user = await User.findById(userId).populate('tenant');
 
       if (!user) {
+        console.log('❌ [AUTH] User not found in DB for ID:', userId);
         return res.status(401).json(
           errorResponse(ErrorCodes.UNAUTHORIZED, 'کاربر یافت نشد')
         );
       }
 
+      console.log('✅ [AUTH] User authenticated:', user.email, '| Role:', user.role);
+
       // بررسی فعال بودن مجموعه (اگر کاربر به مجموعه‌ای متصل است)
       if (user.tenant && !user.tenant.isActive) {
+        console.log('❌ [AUTH] Tenant is inactive:', user.tenant.businessName);
         return res.status(403).json(
           errorResponse(ErrorCodes.FORBIDDEN, 'حساب کسب‌وکار شما غیرفعال شده است')
         );
@@ -67,12 +74,13 @@ const authenticate = async (req, res, next) => {
       return next();
     }
 
+    console.log('❌ [AUTH] No userId in token payload');
     return res.status(401).json(
       errorResponse(ErrorCodes.UNAUTHORIZED, 'توکن نامعتبر است')
     );
 
   } catch (error) {
-    console.error('خطا در احراز هویت:', error);
+    console.error('❌ [AUTH] Internal Error:', error);
     return res.status(500).json(
       errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR)
     );
@@ -98,11 +106,14 @@ const requireRole = (allowedRoles) => {
     if (userRole === 'admin') userRole = 'super_admin'; // ادمین قدیمی -> سوپر ادمین
     if (userRole === 'user') userRole = 'tenant_admin'; // یوزر قدیمی -> مدیر مجموعه (پیش‌فرض)
 
+    console.log(`🔍 [ROLE CHECK] User Role: ${userRole} | Allowed: ${allowedRoles}`);
+
     // اگر نقش کاربر در لیست مجاز بود یا سوپر ادمین بود
     if (allowedRoles.includes(userRole) || userRole === 'super_admin') {
       return next();
     }
 
+    console.log('❌ [ROLE CHECK] Access Denied');
     return res.status(403).json(
       errorResponse(ErrorCodes.FORBIDDEN, 'شما دسترسی به این بخش ندارید')
     );
