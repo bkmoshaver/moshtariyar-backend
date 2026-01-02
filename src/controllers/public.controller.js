@@ -1,6 +1,6 @@
 /**
- * Public Controller
- * کنترلر بخش‌های عمومی (پروفایل کاربر و فروشگاه)
+ * Public Controller (Robust Version)
+ * کنترلر بخش‌های عمومی با قابلیت خودترمیمی
  */
 
 const User = require('../models/User');
@@ -22,7 +22,6 @@ exports.getUserProfile = async (req, res) => {
       return res.status(404).json({ message: 'کاربر یافت نشد' });
     }
 
-    // فقط لینک‌های فعال را برگردان
     if (user.links) {
       user.links = user.links.filter(link => link.active);
     }
@@ -35,47 +34,83 @@ exports.getUserProfile = async (req, res) => {
 };
 
 /**
- * دریافت صفحه عمومی فروشگاه
+ * دریافت صفحه عمومی فروشگاه (با منطق فال‌بک)
  * GET /api/public/store/:slug
  */
 exports.getStorePage = async (req, res) => {
   try {
     const { slug } = req.params;
+    console.log(`🔍 Searching for store: ${slug}`);
 
-    const tenant = await Tenant.findOne({ slug, isActive: true })
-      .select('name slug branding giftSettings stats plan')
-      .lean();
+    // 1. جستجو با slug دقیق
+    let tenant = await Tenant.findOne({ slug, isActive: true });
+
+    // 2. اگر پیدا نشد، جستجو با نام (Case Insensitive)
+    if (!tenant) {
+      console.log(`⚠️ Store not found by slug, trying name: ${slug}`);
+      tenant = await Tenant.findOne({ 
+        name: { $regex: new RegExp(`^${slug}$`, 'i') },
+        isActive: true 
+      });
+
+      // اگر با نام پیدا شد، slug را برایش ست کن (Self-Healing)
+      if (tenant && !tenant.slug) {
+        console.log(`🛠️ Self-healing: Setting slug for ${tenant.name} to ${slug}`);
+        tenant.slug = slug.toLowerCase();
+        await tenant.save();
+      }
+    }
+
+    // 3. اگر باز هم پیدا نشد، شاید ID باشد
+    if (!tenant && slug.match(/^[0-9a-fA-F]{24}$/)) {
+      console.log(`⚠️ Store not found by name, trying ID: ${slug}`);
+      tenant = await Tenant.findOne({ _id: slug, isActive: true });
+      
+      // اگر با ID پیدا شد، slug پیش‌فرض بساز
+      if (tenant && !tenant.slug) {
+        const newSlug = `store-${slug.slice(-6)}`;
+        console.log(`🛠️ Self-healing: Setting slug for ${tenant.name} to ${newSlug}`);
+        tenant.slug = newSlug;
+        await tenant.save();
+      }
+    }
 
     if (!tenant) {
+      console.log('❌ Store absolutely not found');
       return res.status(404).json({ message: 'فروشگاه یافت نشد یا غیرفعال است' });
     }
 
     // بررسی انقضای اشتراک
-    if (new Date() > new Date(tenant.plan.expiresAt)) {
+    if (tenant.plan && tenant.plan.expiresAt && new Date() > new Date(tenant.plan.expiresAt)) {
       return res.status(403).json({ message: 'اشتراک این فروشگاه به پایان رسیده است' });
     }
 
-    res.json(tenant);
+    // انتخاب فیلدهای عمومی
+    const publicData = {
+      _id: tenant._id,
+      name: tenant.name,
+      slug: tenant.slug,
+      branding: tenant.branding,
+      giftSettings: tenant.giftSettings,
+      stats: tenant.stats,
+      address: tenant.address,
+      phone: tenant.phone
+    };
+
+    res.json(publicData);
   } catch (error) {
     console.error('Get Store Error:', error);
     res.status(500).json({ message: 'خطای سرور' });
   }
 };
 
-/**
- * بررسی آزاد بودن نام کاربری
- * GET /api/public/check-username/:username
- */
 exports.checkUsername = async (req, res) => {
   try {
     const { username } = req.params;
-    
-    // لیست نام‌های رزرو شده
     const reservedNames = ['admin', 'login', 'dashboard', 'register', 'api', 'shop', 'store', 's'];
     if (reservedNames.includes(username.toLowerCase())) {
       return res.json({ available: false, message: 'این نام کاربری رزرو شده است' });
     }
-
     const user = await User.findOne({ username });
     res.json({ available: !user });
   } catch (error) {
@@ -83,19 +118,13 @@ exports.checkUsername = async (req, res) => {
   }
 };
 
-/**
- * بررسی آزاد بودن شناسه فروشگاه
- * GET /api/public/check-slug/:slug
- */
 exports.checkSlug = async (req, res) => {
   try {
     const { slug } = req.params;
-    
     const reservedSlugs = ['admin', 'api', 'www', 'mail', 'ftp'];
     if (reservedSlugs.includes(slug.toLowerCase())) {
       return res.json({ available: false, message: 'این شناسه رزرو شده است' });
     }
-
     const tenant = await Tenant.findOne({ slug });
     res.json({ available: !tenant });
   } catch (error) {
