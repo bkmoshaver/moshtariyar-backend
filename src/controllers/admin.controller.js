@@ -71,3 +71,60 @@ exports.toggleTenantStatus = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * دریافت لیست تمام کاربران سیستم
+ * GET /api/admin/users
+ */
+exports.getAllUsers = async (req, res, next) => {
+  try {
+    const users = await User.find()
+      .select('-password')
+      .populate('tenant', 'name')
+      .sort({ createdAt: -1 });
+
+    res.json(successResponse({ users }));
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * تغییر نقش هر کاربری در سیستم
+ * PATCH /api/admin/users/:id/role
+ */
+exports.updateUserRole = async (req, res, next) => {
+  try {
+    const { role } = req.body;
+    const allowedRoles = ['super_admin', 'tenant_admin', 'staff', 'client'];
+
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json(
+        errorResponse(ErrorCodes.VALIDATION_ERROR, 'نقش انتخاب شده معتبر نیست')
+      );
+    }
+
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json(errorResponse(ErrorCodes.NOT_FOUND, 'کاربر یافت نشد'));
+    }
+
+    // جلوگیری از تغییر نقش خود سوپر ادمین توسط خودش (برای جلوگیری از قفل شدن)
+    if (user._id.toString() === req.user._id.toString() && role !== 'super_admin') {
+      return res.status(400).json(
+        errorResponse(ErrorCodes.ACCESS_DENIED, 'شما نمی‌توانید نقش سوپر ادمین خود را تغییر دهید')
+      );
+    }
+
+    user.role = role;
+    await user.save();
+
+    res.json(successResponse({ 
+      id: user._id, 
+      role: user.role 
+    }, 'نقش کاربر با موفقیت تغییر کرد'));
+  } catch (error) {
+    next(error);
+  }
+};

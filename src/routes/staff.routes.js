@@ -26,5 +26,6 @@ router.use(requireRole(['tenant_admin']));
 router.get('/', staffController.getStaff);
 router.post('/', validate(createStaffSchema), staffController.createStaff);
 router.delete('/:id', staffController.deleteStaff);
+router.patch('/:id/role', staffController.updateStaffRole);
 
 module.exports = router;
