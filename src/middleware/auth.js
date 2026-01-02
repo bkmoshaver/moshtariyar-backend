@@ -32,9 +32,13 @@ const authenticate = async (req, res, next) => {
     }
 
     // بارگذاری اطلاعات کاربر
-    if (decoded.userId) {
+    // نکته مهم: در authController.js توکن با کلید id ساخته می‌شود، اما اینجا userId چک می‌شد
+    // برای اطمینان، هر دو حالت (id و userId) را چک می‌کنیم
+    const userId = decoded.id || decoded.userId;
+
+    if (userId) {
       // populate کردن tenant برای دسترسی به اطلاعات مجموعه
-      const user = await User.findById(decoded.userId).populate('tenant');
+      const user = await User.findById(userId).populate('tenant');
 
       if (!user) {
         return res.status(401).json(
