@@ -36,53 +36,43 @@ exports.getProfile = async (req, res) => {
  * @access  Private
  */
 exports.updateProfile = async (req, res) => {
-  console.log('Update Profile Request Body:', req.body);
-  console.log('Update Profile User ID:', req.user._id);
-
   try {
     const { name, username, bio, links } = req.body;
     const userId = req.user._id;
 
     // Check if username is taken by another user
-    if (username && username.trim() !== '') {
-      const existingUser = await User.findOne({ username, _id: { $ne: userId } });
-      if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: 'این نام کاربری قبلاً انتخاب شده است'
-        });
+    if (username) {
+      // اگر نام کاربری خالی بود، آن را نادیده بگیر (برای جلوگیری از خطای تکراری بودن رشته خالی)
+      if (username.trim() === '') {
+        // اگر کاربر می‌خواهد نام کاربری را پاک کند
+        // اما چون در مدل unique: true و sparse: true است، بهتر است اصلا آپدیت نشود یا null شود
+        // فعلاً اگر خالی بود، کاری نمی‌کنیم (یا می‌توانیم null ست کنیم)
+      } else {
+        const existingUser = await User.findOne({ username, _id: { $ne: userId } });
+        if (existingUser) {
+          return res.status(400).json({
+            success: false,
+            message: 'این نام کاربری قبلاً انتخاب شده است'
+          });
+        }
       }
     }
 
     // Build update object
     const updateFields = {};
-    const unsetFields = {}; // برای حذف فیلدها
-
     if (name) updateFields.name = name;
     
-    // مدیریت نام کاربری: اگر خالی بود، کلاً حذفش کن ($unset)
+    // مدیریت نام کاربری: اگر خالی بود، null ذخیره کن تا sparse index کار کند
     if (username !== undefined) {
-      if (username === null || username.trim() === '') {
-        unsetFields.username = 1; // دستور حذف فیلد
-      } else {
-        updateFields.username = username;
-      }
+      updateFields.username = username.trim() === '' ? null : username;
     }
     
     if (bio !== undefined) updateFields.bio = bio;
     if (links) updateFields.links = links;
 
-    // ساخت کوئری آپدیت
-    const updateQuery = { $set: updateFields };
-    if (Object.keys(unsetFields).length > 0) {
-      updateQuery.$unset = unsetFields;
-    }
-
-    console.log('Update Query:', JSON.stringify(updateQuery, null, 2));
-
     const user = await User.findByIdAndUpdate(
       userId,
-      updateQuery,
+      { $set: updateFields },
       { new: true, runValidators: true }
     );
 
@@ -109,18 +99,9 @@ exports.updateProfile = async (req, res) => {
       });
     }
 
-    // نمایش خطای دقیق اعتبارسنجی
-    if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map(val => val.message);
-      return res.status(400).json({
-        success: false,
-        message: messages.join(', ')
-      });
-    }
-
     res.status(500).json({
       success: false,
-      message: 'خطا در بروزرسانی پروفایل: ' + error.message
+      message: 'خطا در بروزرسانی پروفایل'
     });
   }
 };

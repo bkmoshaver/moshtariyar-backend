@@ -1,6 +1,6 @@
 /**
  * Authentication Middleware
- * احراز هویت کاربر و بررسی دسترسی (نسخه Multi-Tenant)
+ * احراز هویت کاربر و بررسی دسترسی
  */
 
 const User = require('../models/User');
@@ -26,7 +26,7 @@ const authenticate = async (req, res, next) => {
     let decoded;
     try {
       decoded = verifyAccessToken(token);
-      console.log('✅ [AUTH] Token decoded:', decoded);
+      // console.log('✅ [AUTH] Token decoded:', decoded);
     } catch (error) {
       console.log('❌ [AUTH] Token verification failed:', error.message);
       return res.status(401).json(
@@ -50,7 +50,7 @@ const authenticate = async (req, res, next) => {
         );
       }
 
-      console.log('✅ [AUTH] User authenticated:', user.email, '| Role:', user.role);
+      // console.log('✅ [AUTH] User authenticated:', user.email, '| Role:', user.role);
 
       // بررسی فعال بودن مجموعه (اگر کاربر به مجموعه‌ای متصل است)
       if (user.tenant && !user.tenant.isActive) {
@@ -106,7 +106,7 @@ const requireRole = (allowedRoles) => {
     if (userRole === 'admin') userRole = 'super_admin'; // ادمین قدیمی -> سوپر ادمین
     if (userRole === 'user') userRole = 'tenant_admin'; // یوزر قدیمی -> مدیر مجموعه (پیش‌فرض)
 
-    console.log(`🔍 [ROLE CHECK] User Role: ${userRole} | Allowed: ${allowedRoles}`);
+    // console.log(`🔍 [ROLE CHECK] User Role: ${userRole} | Allowed: ${allowedRoles}`);
 
     // اگر نقش کاربر در لیست مجاز بود یا سوپر ادمین بود
     if (allowedRoles.includes(userRole) || userRole === 'super_admin') {
@@ -122,16 +122,43 @@ const requireRole = (allowedRoles) => {
 
 /**
  * Middleware بررسی دسترسی (Permission)
- * فعلاً ساده‌سازی شده
+ * @param {string} permission - نام دسترسی مورد نیاز
  */
 const requirePermission = (permission) => {
   return (req, res, next) => {
-    // فعلاً همه کاربران لاگین شده دسترسی دارند
-    // در آینده بر اساس جدول دسترسی‌ها چک می‌شود
-    if (req.user) {
+    const user = req.user;
+
+    if (!user) {
+      return res.status(401).json(
+        errorResponse(ErrorCodes.UNAUTHORIZED)
+      );
+    }
+
+    // ادمین کل و مدیر فروشگاه همیشه دسترسی دارند
+    if (user.role === 'super_admin' || user.role === 'shop_manager' || user.role === 'tenant_admin') {
       return next();
     }
-    return res.status(403).json(errorResponse(ErrorCodes.FORBIDDEN));
+
+    // کارمندان باید دسترسی خاص داشته باشند
+    if (user.role === 'staff') {
+      // فعلاً برای جلوگیری از خطا، اگر کاربر staff باشد هم اجازه می‌دهیم
+      // تا زمانی که سیستم دسترسی‌های ریز (granular permissions) کامل پیاده شود
+      return next();
+    }
+
+    // مشتریان دسترسی ندارند
+    if (user.role === 'customer') {
+      console.log('❌ [PERMISSION] Customer tried to access protected route');
+      return res.status(403).json(
+        errorResponse(ErrorCodes.FORBIDDEN, 'مشتریان دسترسی به این عملیات ندارند')
+      );
+    }
+    
+    // سایر نقش‌ها
+    console.log(`❌ [PERMISSION] Access denied for role: ${user.role}`);
+    return res.status(403).json(
+      errorResponse(ErrorCodes.FORBIDDEN, 'شما دسترسی به این عملیات ندارید')
+    );
   };
 };
 
