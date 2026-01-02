@@ -21,6 +21,23 @@ const registerSchema = z.object({
   })
 });
 
+// اعتبارسنجی آپدیت تنظیمات
+const updateSchema = z.object({
+  body: z.object({
+    name: z.string().min(3).max(100).optional(),
+    branding: z.object({
+      logo: z.string().optional(),
+      primaryColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/).optional(),
+      secondaryColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/).optional()
+    }).optional(),
+    giftSettings: z.object({
+      enabled: z.boolean().optional(),
+      percentage: z.number().min(0).max(100).optional(),
+      expireDays: z.number().min(1).optional()
+    }).optional()
+  })
+});
+
 /**
  * @route   POST /api/tenants/register
  * @desc    ثبت‌نام مجموعه جدید (Onboarding)
@@ -34,5 +51,12 @@ router.post('/register', validate(registerSchema), tenantController.registerTena
  * @access  Private (Tenant Admin, Staff)
  */
 router.get('/me', authenticate, tenantController.getCurrentTenant);
+
+/**
+ * @route   PUT /api/tenants/me
+ * @desc    به‌روزرسانی تنظیمات مجموعه
+ * @access  Private (Tenant Admin)
+ */
+router.put('/me', authenticate, validate(updateSchema), tenantController.updateTenant);
 
 module.exports = router;

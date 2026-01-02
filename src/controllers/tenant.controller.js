@@ -97,3 +97,36 @@ exports.getCurrentTenant = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * به‌روزرسانی تنظیمات مجموعه
+ * PUT /api/tenants/me
+ */
+exports.updateTenant = async (req, res, next) => {
+  try {
+    const { name, branding, giftSettings } = req.body;
+    const tenant = req.tenant;
+
+    if (name) tenant.name = name;
+    
+    if (branding) {
+      tenant.branding = {
+        ...tenant.branding,
+        ...branding
+      };
+    }
+
+    if (giftSettings) {
+      tenant.giftSettings = {
+        ...tenant.giftSettings,
+        ...giftSettings
+      };
+    }
+
+    await tenant.save();
+
+    res.json(successResponse({ tenant }, 'تنظیمات با موفقیت ذخیره شد'));
+  } catch (error) {
+    next(error);
+  }
+};

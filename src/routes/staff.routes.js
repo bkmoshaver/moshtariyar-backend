@@ -1,35 +1,30 @@
 /**
- * Staff Routes (Multi-Tenant)
- * مسیرهای احراز هویت Staff/Tenant - برای آینده
- * فعلاً غیرفعال است
+ * Staff Routes
+ * مسیرهای مدیریت پرسنل
  */
 
 const express = require('express');
 const router = express.Router();
-const authController = require('../controllers/auth.controller');
-const { authenticate } = require('../middleware/auth');
+const staffController = require('../controllers/staff.controller');
+const { authenticate, requireRole } = require('../middleware/auth');
 const validate = require('../middleware/validate');
-const { registerTenantSchema, loginSchema } = require('../validators/auth.validator');
+const { z } = require('zod');
 
-/**
- * @route   POST /api/staff/register
- * @desc    ثبت‌نام تنانت جدید
- * @access  Public
- */
-router.post('/register', validate(registerTenantSchema), authController.register);
+// اعتبارسنجی افزودن پرسنل
+const createStaffSchema = z.object({
+  body: z.object({
+    name: z.string().min(3).max(100),
+    email: z.string().email(),
+    password: z.string().min(6)
+  })
+});
 
-/**
- * @route   POST /api/staff/login
- * @desc    ورود کارمند
- * @access  Public
- */
-router.post('/login', validate(loginSchema), authController.login);
+// همه مسیرها نیاز به احراز هویت و نقش مدیر مجموعه دارند
+router.use(authenticate);
+router.use(requireRole(['tenant_admin']));
 
-/**
- * @route   GET /api/staff/me
- * @desc    دریافت اطلاعات کارمند فعلی
- * @access  Private
- */
-router.get('/me', authenticate, authController.getMe);
+router.get('/', staffController.getStaff);
+router.post('/', validate(createStaffSchema), staffController.createStaff);
+router.delete('/:id', staffController.deleteStaff);
 
 module.exports = router;
