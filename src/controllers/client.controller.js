@@ -3,7 +3,7 @@
  * مدیریت مشتریان
  */
 
-const { Client } = require('../models');
+const { Client, Transaction } = require('../models');
 const { successResponse, errorResponse, ErrorCodes } = require('../utils/errorResponse');
 
 /**
@@ -199,7 +199,7 @@ const deleteClient = async (req, res, next) => {
  */
 const addBalance = async (req, res, next) => {
   try {
-    const { amount } = req.body;
+    const { amount, type, description } = req.body; // type: 'deposit' or 'withdraw'
 
     const client = await Client.findOne({
       _id: req.params.id,
@@ -212,11 +212,58 @@ const addBalance = async (req, res, next) => {
       );
     }
 
-    client.addGift(amount);
+    // اطمینان از وجود آبجکت wallet و آرایه gifts
+    if (!client.wallet) {
+      client.wallet = { balance: 0, gifts: [], totalGifts: 0, totalUsed: 0, totalSpent: 0 };
+    }
+    if (!client.wallet.gifts) {
+      client.wallet.gifts = [];
+    }
+
+    let finalAmount = parseInt(amount);
+    if (isNaN(finalAmount) || finalAmount <= 0) {
+      return res.status(400).json(errorResponse(ErrorCodes.VALIDATION_ERROR, 'مبلغ نامعتبر است'));
+    }
+
+    if (type === 'withdraw') {
+      // برداشت از حساب
+      if (client.wallet.balance < finalAmount) {
+        return res.status(400).json(errorResponse(ErrorCodes.VALIDATION_ERROR, 'موجودی کافی نیست'));
+      }
+      client.wallet.balance -= finalAmount;
+      // اینجا می‌توانیم منطق کسر از هدایا را هم اضافه کنیم اگر لازم باشد، اما برای سادگی فعلاً فقط از بالانس کم می‌کنیم
+    } else {
+      // واریز به حساب (هدیه دستی)
+      client.wallet.balance += finalAmount;
+      client.wallet.totalGifts += finalAmount;
+      
+      // اضافه کردن به لیست هدایا
+      client.wallet.gifts.push({
+        amount: finalAmount,
+        balance: finalAmount,
+        used: 0,
+        source: 'manual',
+        description: description || 'افزایش دستی اعتبار',
+        createdAt: new Date(),
+        expiresAt: null // یا یک تاریخ انقضای پیش‌فرض
+      });
+    }
+
     await client.save();
 
+    // ثبت تراکنش
+    await Transaction.create({
+      client: client._id,
+      tenant: req.tenantId,
+      type: type === 'withdraw' ? 'withdraw' : 'deposit', // 'manual_adjustment' هم می‌تواند باشد
+      amount: finalAmount,
+      balanceAfter: client.wallet.balance,
+      description: description || (type === 'withdraw' ? 'کسر دستی اعتبار' : 'افزایش دستی اعتبار'),
+      performedBy: req.userId
+    });
+
     res.json(
-      successResponse({ client }, 'موجودی با موفقیت اضافه شد')
+      successResponse({ client }, 'موجودی با موفقیت به‌روزرسانی شد')
     );
 
   } catch (error) {

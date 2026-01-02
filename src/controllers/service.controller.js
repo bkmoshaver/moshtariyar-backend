@@ -3,7 +3,7 @@
  * کنترلر مدیریت سرویس‌ها
  */
 
-const { Service, Client, Tenant, Settings } = require('../models');
+const { Service, Client, Tenant, Settings, Transaction } = require('../models');
 const { successResponse, errorResponse, ErrorCodes } = require('../utils/errorResponse');
 const { smsQueue } = require('../config/queue');
 
@@ -162,6 +162,20 @@ const createService = async (req, res, next) => {
       
       // جلوگیری از منفی شدن موجودی (محض اطمینان)
       if (client.wallet.balance < 0) client.wallet.balance = 0;
+
+      // ثبت تراکنش برداشت (Withdraw)
+      if (walletUsedAmount > 0) {
+        await Transaction.create({
+          client: client._id,
+          tenant: tenantId,
+          type: 'withdraw',
+          amount: walletUsedAmount,
+          balanceAfter: client.wallet.balance,
+          description: `کسر بابت سرویس: ${title || description}`,
+          relatedService: null, // Will be updated after service creation
+          performedBy: req.userId
+        });
+      }
     }
 
     // محاسبه مبلغ نهایی
@@ -203,6 +217,14 @@ const createService = async (req, res, next) => {
     const service = new Service(serviceData);
     await service.save();
 
+    // به‌روزرسانی تراکنش برداشت با شناسه سرویس
+    if (walletUsedAmount > 0) {
+      await Transaction.updateMany(
+        { client: client._id, type: 'withdraw', relatedService: null },
+        { $set: { relatedService: service._id } }
+      ).sort({ createdAt: -1 }).limit(1);
+    }
+
     // اضافه کردن هدیه جدید به کیف پول
     if (giftAmount > 0) {
       const expiryDate = new Date();
@@ -220,6 +242,18 @@ const createService = async (req, res, next) => {
 
       client.wallet.balance += giftAmount;
       client.wallet.totalGifts += giftAmount;
+
+      // ثبت تراکنش واریز (Deposit)
+      await Transaction.create({
+        client: client._id,
+        tenant: tenantId,
+        type: 'deposit',
+        amount: giftAmount,
+        balanceAfter: client.wallet.balance,
+        description: `هدیه سرویس: ${title || description}`,
+        relatedService: service._id,
+        performedBy: req.userId
+      });
     }
 
     // به‌روزرسانی آمار مشتری
