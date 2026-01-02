@@ -91,6 +91,8 @@ exports.getCurrentTenant = async (req, res, next) => {
     if (!req.tenant) {
       return res.status(404).json(errorResponse(ErrorCodes.NOT_FOUND, 'مجموعه‌ای یافت نشد'));
     }
+
+
     
     res.json(successResponse({ tenant: req.tenant }));
   } catch (error) {
