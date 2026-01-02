@@ -1,22 +1,25 @@
 /**
- * Admin Routes
- * مسیرهای پنل سوپر ادمین
+ * Super Admin Routes
+ * مسیرهای مربوط به سوپر ادمین
  */
 
 const express = require('express');
 const router = express.Router();
-const adminController = require('../controllers/admin.controller');
+const superAdminController = require('../controllers/superAdminController');
 const { authenticate, requireRole } = require('../middleware/auth');
 
-// همه مسیرها نیاز به احراز هویت و نقش سوپر ادمین دارند
+// همه مسیرها نیاز به لاگین و نقش super_admin دارند
 router.use(authenticate);
 router.use(requireRole(['super_admin']));
 
-router.get('/stats', adminController.getSystemStats);
-router.get('/tenants', adminController.getAllTenants);
-router.patch('/tenants/:id/status', adminController.toggleTenantStatus);
+// آمار داشبورد
+router.get('/stats', superAdminController.getDashboardStats);
 
-router.get('/users', adminController.getAllUsers);
-router.patch('/users/:id/role', adminController.updateUserRole);
+// مدیریت فروشگاه‌ها
+router.get('/tenants', superAdminController.getTenants);
+router.patch('/tenants/:id/status', superAdminController.updateTenantStatus);
+
+// لاگ فعالیت‌ها
+router.get('/logs', superAdminController.getActivityLogs);
 
 module.exports = router;
