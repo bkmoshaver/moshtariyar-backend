@@ -3,7 +3,7 @@ const router = express.Router();
 
 // Import Routes
 const authRoutes = require('./auth.routes');
-const userRoutes = require('./userRoutes'); // Updated to use new userRoutes.js
+const userRoutes = require('./user.routes'); // Updated to use user.routes.js
 const clientRoutes = require('./client.routes');
 const serviceRoutes = require('./service.routes');
 const settingsRoutes = require('./settings.routes');
