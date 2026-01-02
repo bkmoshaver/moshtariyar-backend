@@ -38,35 +38,23 @@ exports.getProfile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const { name, username, bio, links } = req.body;
-    const userId = req.user._id;
+    const userId = req.user._id; // Changed from req.user.id to req.user._id
 
     // Check if username is taken by another user
     if (username) {
-      // اگر نام کاربری خالی بود، آن را نادیده بگیر (برای جلوگیری از خطای تکراری بودن رشته خالی)
-      if (username.trim() === '') {
-        // اگر کاربر می‌خواهد نام کاربری را پاک کند
-        // اما چون در مدل unique: true و sparse: true است، بهتر است اصلا آپدیت نشود یا null شود
-        // فعلاً اگر خالی بود، کاری نمی‌کنیم (یا می‌توانیم null ست کنیم)
-      } else {
-        const existingUser = await User.findOne({ username, _id: { $ne: userId } });
-        if (existingUser) {
-          return res.status(400).json({
-            success: false,
-            message: 'این نام کاربری قبلاً انتخاب شده است'
-          });
-        }
+      const existingUser = await User.findOne({ username, _id: { $ne: userId } });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'این نام کاربری قبلاً انتخاب شده است'
+        });
       }
     }
 
     // Build update object
     const updateFields = {};
     if (name) updateFields.name = name;
-    
-    // مدیریت نام کاربری: اگر خالی بود، null ذخیره کن تا sparse index کار کند
-    if (username !== undefined) {
-      updateFields.username = username.trim() === '' ? null : username;
-    }
-    
+    if (username !== undefined) updateFields.username = username;
     if (bio !== undefined) updateFields.bio = bio;
     if (links) updateFields.links = links;
 
@@ -199,7 +187,7 @@ exports.createUser = async (req, res) => {
  */
 exports.updateUser = async (req, res) => {
   try {
-    const { name, role, password, tenant } = req.body; // Added tenant to destructuring
+    const { name, role, password } = req.body;
     const user = await User.findById(req.params.id);
 
     if (!user) {
@@ -221,11 +209,6 @@ exports.updateUser = async (req, res) => {
     if (name) user.name = name;
     if (role) user.role = role;
     if (password) user.password = password;
-    
-    // Allow super_admin to update tenant
-    if (req.user.role === 'super_admin' && tenant) {
-      user.tenant = tenant;
-    }
 
     await user.save();
 
