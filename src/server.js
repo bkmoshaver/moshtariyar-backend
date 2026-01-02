@@ -65,6 +65,7 @@ app.use(cors({
       /^http:\/\/localhost(:\d+)?$/,           // localhost با هر port
       /^https:\/\/.*\.manus\.space$/,          // همه subdomain های manus.space
       /^https:\/\/.*\.manusvm\.computer$/,     // همه subdomain های manusvm.computer
+      /^https:\/\/.*\.manus-asia\.computer$/,  // ⬅️ اضافه شده: دامنه جدید manus-asia.computer
       /^https:\/\/.*\.manus\.im$/              // همه subdomain های manus.im (Management UI)
     ];
     
