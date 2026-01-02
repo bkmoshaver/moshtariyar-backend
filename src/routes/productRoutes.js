@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect, authorize } = require('../middleware/auth');
+const { authenticate, requireRole } = require('../middleware/auth'); // Changed from protect, authorize to authenticate, requireRole
 const { 
   getProducts, 
   createProduct, 
@@ -13,10 +13,10 @@ const {
 router.get('/public/:slug', getPublicProducts);
 
 // Protected routes
-router.use(protect);
+router.use(authenticate); // Changed from protect
 router.get('/', getProducts);
-router.post('/', authorize('tenant_admin', 'staff'), createProduct);
-router.put('/:id', authorize('tenant_admin', 'staff'), updateProduct);
-router.delete('/:id', authorize('tenant_admin', 'staff'), deleteProduct);
+router.post('/', requireRole(['tenant_admin', 'staff']), createProduct); // Changed from authorize
+router.put('/:id', requireRole(['tenant_admin', 'staff']), updateProduct); // Changed from authorize
+router.delete('/:id', requireRole(['tenant_admin', 'staff']), deleteProduct); // Changed from authorize
 
 module.exports = router;
