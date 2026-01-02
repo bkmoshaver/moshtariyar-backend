@@ -104,16 +104,32 @@ exports.getCurrentTenant = async (req, res, next) => {
  */
 exports.updateTenant = async (req, res, next) => {
   try {
-    const { name, branding, giftSettings } = req.body;
+    const { name, slug, address, phone, banner, branding, giftSettings } = req.body;
     const tenant = req.tenant;
 
     if (name) tenant.name = name;
+    if (address) tenant.address = address;
+    if (phone) tenant.phone = phone;
+    
+    // Check slug uniqueness if changed
+    if (slug && slug !== tenant.slug) {
+      const existing = await Tenant.findOne({ slug, _id: { $ne: tenant._id } });
+      if (existing) {
+        return res.status(400).json(errorResponse(ErrorCodes.DUPLICATE_ENTRY, 'این نامک قبلاً استفاده شده است'));
+      }
+      tenant.slug = slug;
+    }
     
     if (branding) {
       tenant.branding = {
         ...tenant.branding,
         ...branding
       };
+      // اگر بنر مستقیماً در بادی ارسال شده باشد، آن را در برندینگ هم آپدیت می‌کنیم
+      if (banner) tenant.branding.banner = banner;
+    } else if (banner) {
+      // اگر برندینگ ارسال نشده اما بنر ارسال شده
+      tenant.branding.banner = banner;
     }
 
     if (giftSettings) {
