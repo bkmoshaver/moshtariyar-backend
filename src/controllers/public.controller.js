@@ -5,6 +5,8 @@
 
 const User = require('../models/User');
 const Tenant = require('../models/Tenant');
+const Order = require('../models/Order');
+const Product = require('../models/Product');
 
 /**
  * دریافت پروفایل عمومی کاربر
@@ -129,5 +131,57 @@ exports.checkSlug = async (req, res) => {
     res.json({ available: !tenant });
   } catch (error) {
     res.status(500).json({ message: 'خطای سرور' });
+  }
+};
+
+/**
+ * ثبت سفارش جدید
+ * POST /api/public/orders
+ */
+exports.createOrder = async (req, res) => {
+  try {
+    const { tenantId, slug, customerName, customerPhone, items, note } = req.body;
+
+    if (!items || items.length === 0) {
+      return res.status(400).json({ message: 'سبد خرید خالی است' });
+    }
+
+    // Find tenant
+    let tenant;
+    if (tenantId) {
+      tenant = await Tenant.findById(tenantId);
+    } else if (slug) {
+      tenant = await Tenant.findOne({ slug });
+    }
+
+    if (!tenant) {
+      return res.status(404).json({ message: 'فروشگاه یافت نشد' });
+    }
+
+    // Calculate total amount
+    const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    // Create order
+    const order = new Order({
+      tenant: tenant._id,
+      customerName,
+      customerPhone,
+      items,
+      totalAmount,
+      note,
+      status: 'pending'
+    });
+
+    await order.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'سفارش با موفقیت ثبت شد',
+      orderId: order._id
+    });
+
+  } catch (error) {
+    console.error('Create order error:', error);
+    res.status(500).json({ message: 'خطا در ثبت سفارش' });
   }
 };

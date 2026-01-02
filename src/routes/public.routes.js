@@ -15,4 +15,7 @@ router.get('/check-username/:username', publicController.checkUsername);
 router.get('/store/:slug', publicController.getStorePage);
 router.get('/check-slug/:slug', publicController.checkSlug);
 
+// ثبت سفارش
+router.post('/orders', publicController.createOrder);
+
 module.exports = router;

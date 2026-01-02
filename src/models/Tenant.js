@@ -63,6 +63,7 @@ const tenantSchema = new mongoose.Schema({
   // تنظیمات ظاهری
   branding: {
     logo: String,
+    banner: String, // بنر فروشگاه
     primaryColor: {
       type: String,
       default: '#3B82F6'
@@ -71,6 +72,18 @@ const tenantSchema = new mongoose.Schema({
       type: String,
       default: '#10B981'
     }
+  },
+
+  // اطلاعات تماس
+  address: {
+    type: String,
+    trim: true,
+    maxlength: 200
+  },
+  phone: {
+    type: String,
+    trim: true,
+    maxlength: 20
   },
 
   // آمار
