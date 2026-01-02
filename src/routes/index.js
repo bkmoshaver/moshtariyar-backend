@@ -9,6 +9,7 @@ const serviceRoutes = require('./service.routes');
 const settingsRoutes = require('./settings.routes');
 const seedRoutes = require('./seed.routes');
 const transactionRoutes = require('./transaction.routes');
+const tenantRoutes = require('./tenant.routes');
 
 // Health check
 router.get('/health', (req, res) => {
@@ -27,5 +28,6 @@ router.use('/services', serviceRoutes); // مسیرهای خدمات
 router.use('/settings', settingsRoutes); // مسیرهای تنظیمات
 router.use('/seed', seedRoutes);      // مسیرهای دیتای اولیه
 router.use('/transactions', transactionRoutes); // مسیرهای تراکنش‌ها
+router.use('/tenants', tenantRoutes);   // مسیرهای مجموعه‌ها (ثبت‌نام و مدیریت)
 
 module.exports = router;
