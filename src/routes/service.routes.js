@@ -6,7 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const serviceController = require('../controllers/service.controller');
-const { authenticate, requirePermission } = require('../middleware/auth');
+const { authenticate, requireRole } = require('../middleware/auth');
 const validate = require('../middleware/validate');
 const { createServiceSchema, getServicesSchema } = require('../validators/service.validator');
 
@@ -34,7 +34,7 @@ router.get('/:id', serviceController.getService);
  */
 router.post(
   '/',
-  requirePermission('canRegisterServices'),
+  requireRole(['admin', 'staff']),
   validate(createServiceSchema),
   serviceController.createService
 );
@@ -44,6 +44,6 @@ router.post(
  * @desc    حذف سرویس
  * @access  Private (owner/manager)
  */
-router.delete('/:id', serviceController.deleteService);
+router.delete('/:id', requireRole(['admin']), serviceController.deleteService);
 
 module.exports = router;

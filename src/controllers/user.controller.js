@@ -28,7 +28,7 @@ const registerUser = async (req, res, next) => {
       name,
       email,
       password,
-      role: 'user'
+      role: 'staff' // Default role for public registration
     });
 
     await user.save();
@@ -120,7 +120,102 @@ const loginUser = async (req, res, next) => {
   }
 };
 
+/**
+ * دریافت لیست کاربران (فقط ادمین)
+ * GET /api/users
+ */
+const getUsers = async (req, res, next) => {
+  try {
+    const users = await User.find().select('-password').sort('-createdAt');
+    
+    res.json(
+      successResponse({
+        users
+      })
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * ایجاد کاربر جدید توسط ادمین
+ * POST /api/users
+ */
+const createUser = async (req, res, next) => {
+  try {
+    const { name, email, password, role } = req.body;
+
+    // بررسی تکراری نبودن ایمیل
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json(
+        errorResponse(ErrorCodes.DUPLICATE_ENTRY, 'این ایمیل قبلاً ثبت شده است')
+      );
+    }
+
+    // ایجاد کاربر
+    const user = new User({
+      name,
+      email,
+      password,
+      role: role || 'staff'
+    });
+
+    await user.save();
+
+    res.status(201).json(
+      successResponse({
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        }
+      }, 'کاربر با موفقیت ایجاد شد')
+    );
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * حذف کاربر (فقط ادمین)
+ * DELETE /api/users/:id
+ */
+const deleteUser = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json(
+        errorResponse(ErrorCodes.NOT_FOUND, 'کاربر یافت نشد')
+      );
+    }
+
+    // جلوگیری از حذف خود ادمین
+    if (user._id.toString() === req.user._id.toString()) {
+      return res.status(400).json(
+        errorResponse(ErrorCodes.BAD_REQUEST, 'شما نمی‌توانید حساب خود را حذف کنید')
+      );
+    }
+
+    await user.deleteOne();
+
+    res.json(
+      successResponse(null, 'کاربر با موفقیت حذف شد')
+    );
+
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   registerUser,
-  loginUser
+  loginUser,
+  getUsers,
+  createUser,
+  deleteUser
 };

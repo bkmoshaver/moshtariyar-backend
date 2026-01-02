@@ -6,7 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const clientController = require('../controllers/client.controller');
-const { authenticate, requirePermission } = require('../middleware/auth');
+const { authenticate, requireRole } = require('../middleware/auth');
 const validate = require('../middleware/validate'); // ← ← این اصلاح شد
 const { 
   createClientSchema, 
@@ -38,7 +38,7 @@ router.get('/:id', clientController.getClient);
  */
 router.post(
   '/',
-  requirePermission('canManageClients'),
+  requireRole(['admin', 'staff']),
   validate(createClientSchema),
   clientController.createClient
 );
@@ -50,7 +50,7 @@ router.post(
  */
 router.put(
   '/:id',
-  requirePermission('canManageClients'),
+  requireRole(['admin', 'staff']),
   validate(updateClientSchema),
   clientController.updateClient
 );
@@ -62,7 +62,7 @@ router.put(
  */
 router.delete(
   '/:id',
-  requirePermission('canManageClients'),
+  requireRole(['admin']),
   clientController.deleteClient
 );
 
@@ -73,7 +73,7 @@ router.delete(
  */
 router.post(
   '/:id/balance',
-  requirePermission('canManageClients'),
+  requireRole(['admin']),
   validate(addBalanceSchema),
   clientController.addBalance
 );

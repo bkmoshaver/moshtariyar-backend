@@ -8,6 +8,7 @@ const router = express.Router();
 const userController = require('../controllers/user.controller');
 const validate = require('../middleware/validate');   // ←← درست شد
 const { registerUserSchema, loginUserSchema } = require('../validators/user.validator');
+const { authenticate, requireRole } = require('../middleware/auth');
 
 /**
  * @route   POST /api/auth/user/register
@@ -22,5 +23,29 @@ router.post('/register', validate(registerUserSchema), userController.registerUs
  * @access  Public
  */
 router.post('/login', validate(loginUserSchema), userController.loginUser);
+
+// مسیرهای مدیریت کاربران (فقط ادمین)
+router.use(authenticate);
+
+/**
+ * @route   GET /api/users
+ * @desc    دریافت لیست کاربران
+ * @access  Private (Admin)
+ */
+router.get('/', requireRole(['admin']), userController.getUsers);
+
+/**
+ * @route   POST /api/users
+ * @desc    ایجاد کاربر جدید توسط ادمین
+ * @access  Private (Admin)
+ */
+router.post('/', requireRole(['admin']), validate(registerUserSchema), userController.createUser);
+
+/**
+ * @route   DELETE /api/users/:id
+ * @desc    حذف کاربر
+ * @access  Private (Admin)
+ */
+router.delete('/:id', requireRole(['admin']), userController.deleteUser);
 
 module.exports = router;
