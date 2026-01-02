@@ -19,6 +19,11 @@ router.get('/stats', superAdminController.getDashboardStats);
 router.get('/tenants', superAdminController.getTenants);
 router.patch('/tenants/:id/status', superAdminController.updateTenantStatus);
 
+// مدیریت کاربران
+router.get('/users', superAdminController.getUsers);
+router.patch('/users/:id', superAdminController.updateUser);
+router.delete('/users/:id', superAdminController.deleteUser);
+
 // لاگ فعالیت‌ها
 router.get('/logs', superAdminController.getActivityLogs);
 

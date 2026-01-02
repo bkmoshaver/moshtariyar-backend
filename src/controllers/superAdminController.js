@@ -140,3 +140,106 @@ exports.getActivityLogs = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * دریافت لیست کاربران (برای سوپر ادمین)
+ * GET /api/admin/users
+ */
+exports.getUsers = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const users = await User.find()
+      .sort('-createdAt')
+      .skip(skip)
+      .limit(limit)
+      .populate('tenant', 'businessName');
+
+    const total = await User.countDocuments();
+
+    res.json(
+      successResponse({
+        users,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      })
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * ویرایش کاربر (برای سوپر ادمین)
+ * PATCH /api/admin/users/:id
+ */
+exports.updateUser = async (req, res, next) => {
+  try {
+    const { name, role, password } = req.body;
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json(
+        errorResponse(ErrorCodes.NOT_FOUND, 'کاربر یافت نشد')
+      );
+    }
+
+    if (name) user.name = name;
+    if (role) user.role = role;
+    if (password) user.password = password; // Password hashing is handled in User model pre-save
+
+    await user.save();
+
+    // ثبت لاگ
+    await ActivityLog.create({
+      user: req.user._id,
+      action: 'UPDATE_USER',
+      details: `کاربر ${user.email} ویرایش شد`,
+      status: 'success'
+    });
+
+    res.json(
+      successResponse({ user }, 'کاربر با موفقیت ویرایش شد')
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * حذف کاربر (برای سوپر ادمین)
+ * DELETE /api/admin/users/:id
+ */
+exports.deleteUser = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json(
+        errorResponse(ErrorCodes.NOT_FOUND, 'کاربر یافت نشد')
+      );
+    }
+
+    await User.deleteOne({ _id: req.params.id });
+
+    // ثبت لاگ
+    await ActivityLog.create({
+      user: req.user._id,
+      action: 'DELETE_USER',
+      details: `کاربر ${user.email} حذف شد`,
+      status: 'success'
+    });
+
+    res.json(
+      successResponse(null, 'کاربر با موفقیت حذف شد')
+    );
+  } catch (error) {
+    next(error);
+  }
+};
