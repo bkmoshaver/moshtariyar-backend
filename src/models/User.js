@@ -57,7 +57,7 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     enum: ['super_admin', 'tenant_admin', 'staff', 'client', 'user'], // user & admin kept for backward compatibility
-    default: 'tenant_admin'
+    default: 'client' // Changed from 'tenant_admin' to 'client' to avoid validation error on register
   },
 
   // ارتباط با مجموعه (برای Super Admin خالی است)
@@ -66,6 +66,7 @@ const userSchema = new mongoose.Schema({
     ref: 'Tenant',
     required: function() {
       // برای نقش‌های وابسته به مجموعه، این فیلد الزامی است
+      // نقش client و user نیازی به tenant ندارند
       return ['tenant_admin', 'staff'].includes(this.role);
     }
   }

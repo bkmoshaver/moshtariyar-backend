@@ -13,7 +13,7 @@ const { successResponse, errorResponse, ErrorCodes } = require('../utils/errorRe
  */
 const registerUser = async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
     // بررسی تکراری نبودن ایمیل
     const existingUser = await User.findOne({ email });
@@ -23,12 +23,20 @@ const registerUser = async (req, res, next) => {
       );
     }
 
+    // تعیین نقش کاربر
+    // اگر نقش ارسال شده باشد و معتبر باشد (client یا user)، از آن استفاده می‌کنیم
+    // در غیر این صورت پیش‌فرض 'client' است (قبلاً staff بود که باعث خطا می‌شد)
+    let userRole = 'client';
+    if (role && ['client', 'user'].includes(role)) {
+      userRole = role;
+    }
+
     // ایجاد کاربر
     const user = new User({
       name,
       email,
       password,
-      role: 'staff' // Default role for public registration
+      role: userRole
     });
 
     await user.save();
@@ -159,7 +167,7 @@ const createUser = async (req, res, next) => {
       name,
       email,
       password,
-      role: role || 'staff'
+      role: role || 'client' // Default to client instead of staff
     });
 
     await user.save();
