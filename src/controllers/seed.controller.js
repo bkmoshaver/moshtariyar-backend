@@ -17,16 +17,22 @@ const seedUsers = async (req, res, next) => {
 
     const testUsers = [
       {
-        name: 'Admin Test',
+        name: 'مدیر سیستم',
         email: 'admin@test.com',
         password: '123456',
         role: 'admin'
       },
       {
-        name: 'User Test',
-        email: 'user@test.com',
+        name: 'کارمند فروش',
+        email: 'staff@test.com',
         password: '123456',
-        role: 'user'
+        role: 'staff'
+      },
+      {
+        name: 'مشتری نمونه',
+        email: 'client@test.com',
+        password: '123456',
+        role: 'client'
       }
     ];
 
