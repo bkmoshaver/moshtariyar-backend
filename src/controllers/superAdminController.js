@@ -52,7 +52,7 @@ exports.getTenants = async (req, res, next) => {
       .sort('-createdAt')
       .skip(skip)
       .limit(limit)
-      .populate('owner', 'name email');
+      ; // .populate('owner', 'name email'); // Owner field does not exist in Tenant schema
 
     const total = await Tenant.countDocuments();
 
