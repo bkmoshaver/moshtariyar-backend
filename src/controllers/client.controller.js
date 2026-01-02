@@ -212,9 +212,12 @@ const addBalance = async (req, res, next) => {
       );
     }
 
-    // اطمینان از وجود آبجکت wallet
+    // اطمینان از وجود آبجکت wallet و آرایه gifts
     if (!client.wallet) {
       client.wallet = { balance: 0, gifts: [], totalGifts: 0, totalUsed: 0, totalSpent: 0 };
+    }
+    if (!client.wallet.gifts) {
+      client.wallet.gifts = [];
     }
 
     let finalAmount = parseInt(amount);
