@@ -17,6 +17,7 @@ router.get('/stats', superAdminController.getDashboardStats);
 
 // مدیریت فروشگاه‌ها
 router.get('/tenants', superAdminController.getTenants);
+router.get('/tenants/list', superAdminController.getTenantsList); // لیست ساده برای دراپ‌داون
 router.patch('/tenants/:id/status', superAdminController.updateTenantStatus);
 
 // مدیریت کاربران

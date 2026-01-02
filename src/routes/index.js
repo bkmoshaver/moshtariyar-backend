@@ -3,7 +3,7 @@ const router = express.Router();
 
 // Import Routes
 const authRoutes = require('./auth.routes');
-const userRoutes = require('./user.routes');
+const userRoutes = require('./userRoutes'); // Updated to use new userRoutes.js
 const clientRoutes = require('./client.routes');
 const serviceRoutes = require('./service.routes');
 const settingsRoutes = require('./settings.routes');
@@ -13,6 +13,7 @@ const tenantRoutes = require('./tenant.routes');
 const staffRoutes = require('./staff.routes');
 const adminRoutes = require('./admin.routes');
 const publicRoutes = require('./public.routes');
+const productRoutes = require('./productRoutes'); // New product routes
 
 // Health check
 router.get('/health', (req, res) => {
@@ -25,9 +26,9 @@ router.get('/health', (req, res) => {
 
 // API Routes
 router.use('/auth', authRoutes);      // مسیرهای احراز هویت (login/register)
-router.use('/users', userRoutes);     // مسیرهای مدیریت کاربران (admin only)
+router.use('/users', userRoutes);     // مسیرهای مدیریت کاربران (profile update)
 router.use('/clients', clientRoutes); // مسیرهای مشتریان
-router.use('/services', serviceRoutes); // مسیرهای خدمات
+router.use('/services', serviceRoutes); // مسیرهای خدمات (سابقه)
 router.use('/settings', settingsRoutes); // مسیرهای تنظیمات
 router.use('/seed', seedRoutes);      // مسیرهای دیتای اولیه
 router.use('/transactions', transactionRoutes); // مسیرهای تراکنش‌ها
@@ -35,5 +36,6 @@ router.use('/tenants', tenantRoutes);   // مسیرهای مجموعه‌ها (�
 router.use('/staff', staffRoutes);      // مسیرهای مدیریت پرسنل
 router.use('/admin', adminRoutes);      // مسیرهای سوپر ادمین
 router.use('/public', publicRoutes);    // مسیرهای عمومی (پروفایل و فروشگاه)
+router.use('/products', productRoutes); // مسیرهای محصولات (منوی فروشگاه)
 
 module.exports = router;

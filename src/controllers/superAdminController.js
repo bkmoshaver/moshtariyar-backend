@@ -181,7 +181,7 @@ exports.getUsers = async (req, res, next) => {
  */
 exports.updateUser = async (req, res, next) => {
   try {
-    const { name, role, password } = req.body;
+    const { name, role, password, tenant } = req.body;
     const user = await User.findById(req.params.id);
 
     if (!user) {
@@ -193,6 +193,14 @@ exports.updateUser = async (req, res, next) => {
     if (name) user.name = name;
     if (role) user.role = role;
     if (password) user.password = password; // Password hashing is handled in User model pre-save
+    
+    // اگر نقش نیاز به فروشگاه دارد و tenant ارسال شده است، آن را ست کن
+    if (tenant) {
+      user.tenant = tenant;
+    } else if (role === 'client' || role === 'super_admin') {
+      // اگر نقش مشتری یا سوپر ادمین است، فروشگاه را حذف کن (اختیاری)
+      // user.tenant = undefined; 
+    }
 
     await user.save();
 
@@ -238,6 +246,24 @@ exports.deleteUser = async (req, res, next) => {
 
     res.json(
       successResponse(null, 'کاربر با موفقیت حذف شد')
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * دریافت لیست ساده فروشگاه‌ها برای دراپ‌داون
+ * GET /api/admin/tenants/list
+ */
+exports.getTenantsList = async (req, res, next) => {
+  try {
+    const tenants = await Tenant.find({ isActive: true })
+      .select('name _id businessName')
+      .sort('name');
+
+    res.json(
+      successResponse({ tenants })
     );
   } catch (error) {
     next(error);
