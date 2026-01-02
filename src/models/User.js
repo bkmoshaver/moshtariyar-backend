@@ -30,6 +30,30 @@ const userSchema = new mongoose.Schema({
     select: false
   },
 
+  username: {
+    type: String,
+    unique: true,
+    sparse: true,
+    trim: true,
+    lowercase: true,
+    minlength: 3,
+    maxlength: 30,
+    match: [/^[a-z0-9_]+$/, 'نام کاربری فقط می‌تواند شامل حروف انگلیسی، اعداد و زیرخط باشد']
+  },
+
+  bio: {
+    type: String,
+    maxlength: [500, 'بیوگرافی حداکثر 500 کاراکتر است'],
+    default: ''
+  },
+
+  links: [{
+    title: String,
+    url: String,
+    icon: String,
+    active: { type: Boolean, default: true }
+  }],
+
   role: {
     type: String,
     enum: ['super_admin', 'tenant_admin', 'staff', 'client', 'user'], // user & admin kept for backward compatibility

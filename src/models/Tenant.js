@@ -7,6 +7,16 @@ const mongoose = require('mongoose');
 
 const tenantSchema = new mongoose.Schema({
   // اطلاعات اصلی کسب‌وکار
+  slug: {
+    type: String,
+    unique: true,
+    sparse: true,
+    trim: true,
+    lowercase: true,
+    minlength: 3,
+    maxlength: 50,
+    match: [/^[a-z0-9-]+$/, 'شناسه فروشگاه فقط می‌تواند شامل حروف انگلیسی، اعداد و خط تیره باشد']
+  },
   name: {
     type: String,
     required: [true, 'نام کسب‌وکار الزامی است'],

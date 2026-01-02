@@ -12,6 +12,7 @@ const transactionRoutes = require('./transaction.routes');
 const tenantRoutes = require('./tenant.routes');
 const staffRoutes = require('./staff.routes');
 const adminRoutes = require('./admin.routes');
+const publicRoutes = require('./public.routes');
 
 // Health check
 router.get('/health', (req, res) => {
@@ -33,5 +34,6 @@ router.use('/transactions', transactionRoutes); // مسیرهای تراکنش�
 router.use('/tenants', tenantRoutes);   // مسیرهای مجموعه‌ها (ثبت‌نام و مدیریت)
 router.use('/staff', staffRoutes);      // مسیرهای مدیریت پرسنل
 router.use('/admin', adminRoutes);      // مسیرهای سوپر ادمین
+router.use('/public', publicRoutes);    // مسیرهای عمومی (پروفایل و فروشگاه)
 
 module.exports = router;
