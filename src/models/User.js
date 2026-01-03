@@ -71,10 +71,15 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-  links: {
-    type: [String],
-    default: []
-  },
+  links: [{
+    title: String,
+    url: String,
+    icon: String,
+    active: {
+      type: Boolean,
+      default: true
+    }
+  }],
   resetPasswordToken: String,
   resetPasswordExpire: Date,
   createdAt: {
