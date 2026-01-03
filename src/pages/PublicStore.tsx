@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, ShoppingBag, MapPin, Phone, Clock, Package, Scissors, X, ShoppingCart, Trash2, Plus, Minus } from 'lucide-react';
+import { Loader2, ShoppingBag, MapPin, Phone, Clock, Package, Scissors, X, ShoppingCart, Trash2, Plus, Minus, User } from 'lucide-react';
 import api from '@/lib/api';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
@@ -60,6 +60,7 @@ export default function PublicStore() {
   const { items, addItem, removeItem, updateQuantity, totalItems, totalAmount, clearCart } = useCart();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false); // New state for login dialog
   const [checkoutData, setCheckoutData] = useState({ name: '', phone: '', note: '' });
   const [submitting, setSubmitting] = useState(false);
 
@@ -73,6 +74,39 @@ export default function PublicStore() {
     });
     setSelectedProduct(null);
     // Toast is handled in CartContext
+  };
+
+  const handleProceedToCheckout = () => {
+    // Check if user info is already present (e.g. from previous session or login)
+    // For now, we check if checkoutData has name/phone, or if we have a stored user
+    const storedUser = localStorage.getItem('customer_info');
+    if (storedUser) {
+      const parsed = JSON.parse(storedUser);
+      setCheckoutData(prev => ({ ...prev, name: parsed.name, phone: parsed.phone }));
+      setIsCheckoutOpen(true);
+    } else if (checkoutData.name && checkoutData.phone) {
+      setIsCheckoutOpen(true);
+    } else {
+      setIsLoginOpen(true);
+    }
+    setIsCartOpen(false);
+  };
+
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!checkoutData.name || !checkoutData.phone) {
+      toast.error('لطفاً نام و شماره تماس را وارد کنید');
+      return;
+    }
+    
+    // Save to local storage for future use
+    localStorage.setItem('customer_info', JSON.stringify({
+      name: checkoutData.name,
+      phone: checkoutData.phone
+    }));
+
+    setIsLoginOpen(false);
+    setIsCheckoutOpen(true);
   };
 
   const handleCheckout = async () => {
@@ -194,6 +228,12 @@ export default function PublicStore() {
                     <span>{store.address}</span>
                   </div>
                 )}
+                {store.phone && (
+                  <div className="flex items-center gap-1">
+                    <Phone className="w-4 h-4" />
+                    <span className="dir-ltr">{store.phone}</span>
+                  </div>
+                )}
                 {store.stats.totalServices > 0 && (
                   <div className="flex items-center gap-1">
                     <Scissors className="w-4 h-4" />
@@ -280,31 +320,13 @@ export default function PublicStore() {
                       )}
                     </div>
                     <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-bold text-gray-900 line-clamp-1">{product.title}</h3>
-                        <Badge variant={product.type === 'product' ? 'default' : 'secondary'} className="text-xs">
-                          {product.type === 'product' ? 'کالا' : 'خدمت'}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-gray-500 line-clamp-2 mb-4 h-10">
-                        {product.description}
-                      </p>
-                      <div className="flex items-center justify-between mt-auto">
-                        <div className="flex flex-col">
-                          {product.originalPrice && (
-                            <span className="text-xs text-gray-400 line-through">
-                              {product.originalPrice.toLocaleString()}
-                            </span>
-                          )}
-                          <span className="font-bold text-blue-600 text-lg">
-                            {product.price.toLocaleString()} <span className="text-xs font-normal text-gray-500">تومان</span>
-                          </span>
-                        </div>
-                        
-                        {product.type === 'product' && product.stock === 0 ? (
-                          <Badge variant="outline" className="text-red-500 border-red-200">ناموجود</Badge>
-                        ) : (
-                          <Button size="sm" variant="outline">مشاهده</Button>
+                      <h3 className="font-bold text-gray-900 mb-1">{product.title}</h3>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-primary font-bold">
+                          {product.price.toLocaleString()} تومان
+                        </span>
+                        {product.type === 'service' && (
+                          <Badge variant="secondary" className="text-xs">خدمت</Badge>
                         )}
                       </div>
                     </CardContent>
@@ -313,244 +335,243 @@ export default function PublicStore() {
               </div>
             )}
           </div>
-
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">اطلاعات تماس</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <MapPin className="h-4 w-4 shrink-0" />
-                  <span>{store.address || 'آدرس ثبت نشده'}</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <Phone className="h-4 w-4 shrink-0" />
-                  <span dir="ltr" className="text-right w-full">{store.phone || 'شماره تماس ثبت نشده'}</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <Clock className="h-4 w-4" />
-                  <span>ساعات کاری ثبت نشده</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
         </div>
       </div>
 
-      {/* Product Details Modal */}
+      {/* Product Detail Dialog */}
       <Dialog open={!!selectedProduct} onOpenChange={(open) => !open && setSelectedProduct(null)}>
-        <DialogContent className="sm:max-w-md z-[100]" dir="rtl">
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold">{selectedProduct?.title}</DialogTitle>
+            <DialogTitle>{selectedProduct?.title}</DialogTitle>
           </DialogHeader>
-          
           <div className="space-y-4">
-            <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden relative">
+            <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
               {selectedProduct?.image ? (
                 <img src={selectedProduct.image} alt={selectedProduct.title} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-300">
-                  {selectedProduct?.type === 'product' ? (
-                    <Package className="w-16 h-16" />
-                  ) : (
-                    <Scissors className="w-16 h-16" />
-                  )}
+                  <Package className="w-12 h-12" />
                 </div>
               )}
             </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Badge variant={selectedProduct?.type === 'product' ? 'default' : 'secondary'}>
-                  {selectedProduct?.type === 'product' ? 'کالا' : 'خدمت'}
-                </Badge>
-                <div className="flex flex-col items-end">
-                  {selectedProduct?.originalPrice && (
-                    <span className="text-sm text-gray-400 line-through">
-                      {selectedProduct.originalPrice.toLocaleString()}
-                    </span>
-                  )}
-                  <span className="font-bold text-blue-600 text-xl">
-                    {selectedProduct?.price.toLocaleString()} <span className="text-xs font-normal text-gray-500">تومان</span>
-                  </span>
-                </div>
-              </div>
-
-              <p className="text-gray-600 leading-relaxed">
-                {selectedProduct?.description || 'توضیحات بیشتری ثبت نشده است.'}
-              </p>
-
-              {selectedProduct?.type === 'product' && (
-                <div className="pt-2">
-                  <span className={`text-sm ${selectedProduct.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {selectedProduct.stock > 0 ? `موجود در انبار: ${selectedProduct.stock} عدد` : 'ناموجود'}
-                  </span>
-                </div>
+            <p className="text-gray-600 text-sm leading-relaxed">
+              {selectedProduct?.description || 'توضیحات محصول در دسترس نیست.'}
+            </p>
+            <div className="flex items-center justify-between pt-4 border-t">
+              <span className="text-lg font-bold text-primary">
+                {selectedProduct?.price.toLocaleString()} تومان
+              </span>
+              {selectedProduct?.stock === 0 && selectedProduct?.type === 'product' ? (
+                <Button disabled variant="secondary">ناموجود</Button>
+              ) : (
+                <Button onClick={() => selectedProduct && handleAddToCart(selectedProduct)}>
+                  افزودن به سبد خرید
+                </Button>
               )}
-            </div>
-
-            <div className="pt-4 flex gap-3">
-              <Button 
-                className="w-full" 
-                disabled={selectedProduct?.type === 'product' && selectedProduct.stock === 0}
-                onClick={() => selectedProduct && handleAddToCart(selectedProduct)}
-              >
-                افزودن به سبد خرید
-              </Button>
-              <Button variant="outline" onClick={() => setSelectedProduct(null)}>
-                بستن
-              </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* Floating Cart Button */}
-      {totalItems > 0 && (
-        <Button
-          className="fixed bottom-6 left-6 h-14 w-14 rounded-full shadow-xl z-50 flex items-center justify-center"
-          onClick={() => setIsCartOpen(true)}
-        >
-          <div className="relative">
-            <ShoppingCart className="h-6 w-6" />
-            <Badge className="absolute -top-3 -right-3 h-5 w-5 flex items-center justify-center p-0 rounded-full bg-red-500 hover:bg-red-600">
-              {totalItems}
-            </Badge>
-          </div>
-        </Button>
-      )}
-
       {/* Cart Sheet */}
       <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
-        <SheetContent side="left" className="w-full sm:max-w-md flex flex-col z-[100]" dir="rtl">
+        <SheetContent side="left" className="w-full sm:max-w-md flex flex-col">
           <SheetHeader>
             <SheetTitle>سبد خرید</SheetTitle>
             <SheetDescription>
-              {totalItems} محصول در سبد خرید شماست
+              {totalItems} مورد در سبد خرید شما
             </SheetDescription>
           </SheetHeader>
-
-          <div className="flex-1 overflow-y-auto py-4 space-y-4">
+          
+          <div className="flex-1 overflow-y-auto py-4">
             {items.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                سبد خرید شما خالی است
+              <div className="flex flex-col items-center justify-center h-full text-gray-400 space-y-4">
+                <ShoppingCart className="w-16 h-16 opacity-20" />
+                <p>سبد خرید شما خالی است</p>
               </div>
             ) : (
-              items.map((item) => (
-                <div key={item.productId} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-                  <div className="flex-1">
-                    <h4 className="font-medium text-sm">{item.title}</h4>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {item.price.toLocaleString()} تومان
-                    </p>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
+              <div className="space-y-4">
+                {items.map((item) => (
+                  <div key={item.productId} className="flex items-center gap-4 bg-gray-50 p-3 rounded-lg">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-sm">{item.title}</h4>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {item.price.toLocaleString()} تومان
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <span className="w-4 text-center text-sm">{item.quantity}</span>
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
                     <Button 
-                      variant="outline" 
+                      variant="ghost" 
                       size="icon" 
-                      className="h-8 w-8"
-                      onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                      className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => removeItem(item.productId)}
                     >
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    <span className="w-4 text-center text-sm">{item.quantity}</span>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-8 w-8"
-                      onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                    >
-                      <Plus className="h-3 w-3" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
-                    onClick={() => removeItem(item.productId)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
 
-          <SheetFooter className="border-t pt-4 flex-col gap-4 sm:flex-col sm:space-x-0">
-            <div className="flex items-center justify-between w-full font-bold text-lg">
-              <span>جمع کل:</span>
-              <span>{totalAmount.toLocaleString()} تومان</span>
+          <SheetFooter className="border-t pt-4 mt-auto">
+            <div className="w-full space-y-4">
+              <div className="flex justify-between items-center font-bold text-lg">
+                <span>جمع کل:</span>
+                <span>{totalAmount.toLocaleString()} تومان</span>
+              </div>
+              <Button 
+                className="w-full" 
+                size="lg" 
+                disabled={items.length === 0}
+                onClick={handleProceedToCheckout}
+              >
+                تکمیل خرید
+              </Button>
             </div>
-            <Button 
-              className="w-full" 
-              size="lg"
-              disabled={items.length === 0}
-              onClick={() => {
-                setIsCartOpen(false);
-                setIsCheckoutOpen(true);
-              }}
-            >
-              تکمیل خرید
-            </Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>
 
-      {/* Checkout Dialog */}
-      <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
-        <DialogContent className="sm:max-w-[425px] z-[100]" dir="rtl">
+      {/* Login/Info Dialog */}
+      <Dialog open={isLoginOpen} onOpenChange={setIsLoginOpen}>
+        <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle>نهایی کردن سفارش</DialogTitle>
+            <DialogTitle>ورود اطلاعات مشتری</DialogTitle>
             <DialogDescription>
-              لطفاً اطلاعات تماس خود را وارد کنید تا فروشگاه با شما تماس بگیرد.
+              برای ثبت سفارش، لطفاً نام و شماره تماس خود را وارد کنید.
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
+          <form onSubmit={handleLoginSubmit} className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">نام و نام خانوادگی</Label>
-              <Input
-                id="name"
+              <Label>نام و نام خانوادگی</Label>
+              <Input 
                 value={checkoutData.name}
                 onChange={(e) => setCheckoutData({ ...checkoutData, name: e.target.value })}
                 placeholder="مثال: علی محمدی"
+                required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">شماره تماس</Label>
-              <Input
-                id="phone"
+              <Label>شماره تماس</Label>
+              <Input 
                 value={checkoutData.phone}
                 onChange={(e) => setCheckoutData({ ...checkoutData, phone: e.target.value })}
                 placeholder="مثال: 0912..."
                 dir="ltr"
                 className="text-right"
+                required
               />
             </div>
+            <Button type="submit" className="w-full">
+              ادامه ثبت سفارش
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Final Checkout Dialog */}
+      <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>تایید نهایی سفارش</DialogTitle>
+            <DialogDescription>
+              لطفاً اطلاعات سفارش خود را بررسی و تایید کنید.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">مشتری:</span>
+                <span className="font-medium">{checkoutData.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">شماره تماس:</span>
+                <span className="font-medium dir-ltr">{checkoutData.phone}</span>
+              </div>
+            </div>
+
+            <div className="border rounded-lg p-3 max-h-40 overflow-y-auto">
+              {items.map((item) => (
+                <div key={item.productId} className="flex justify-between py-2 border-b last:border-0 text-sm">
+                  <span>{item.title} <span className="text-gray-500">x{item.quantity}</span></span>
+                  <span>{(item.price * item.quantity).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-between items-center font-bold pt-2">
+              <span>مبلغ قابل پرداخت:</span>
+              <span className="text-primary text-lg">{totalAmount.toLocaleString()} تومان</span>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="note">توضیحات (اختیاری)</Label>
-              <Input
-                id="note"
+              <Label>توضیحات سفارش (اختیاری)</Label>
+              <Input 
                 value={checkoutData.note}
                 onChange={(e) => setCheckoutData({ ...checkoutData, note: e.target.value })}
-                placeholder="توضیحات اضافی..."
+                placeholder="مثال: ساعت ۵ عصر تحویل داده شود"
               />
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCheckoutOpen(false)}>
-              انصراف
-            </Button>
+            <Button variant="outline" onClick={() => setIsCheckoutOpen(false)}>انصراف</Button>
             <Button onClick={handleCheckout} disabled={submitting}>
-              {submitting ? 'در حال ثبت...' : 'ثبت سفارش'}
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  در حال ثبت...
+                </>
+              ) : (
+                'ثبت نهایی سفارش'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Floating Cart Button */}
+      {totalItems > 0 && (
+        <div className="fixed bottom-6 left-6 z-50">
+          <Button 
+            size="lg" 
+            className="rounded-full shadow-lg h-14 px-6 bg-primary hover:bg-primary/90 text-white"
+            onClick={() => setIsCartOpen(true)}
+          >
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <ShoppingCart className="h-6 w-6" />
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white">
+                  {totalItems}
+                </span>
+              </div>
+              <span className="font-bold text-lg">
+                {totalAmount.toLocaleString()} تومان
+              </span>
+            </div>
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
