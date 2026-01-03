@@ -52,9 +52,24 @@ exports.getPublicProfile = async (req, res, next) => {
       return next(new ErrorResponse('Profile not found', 404));
     }
 
+    // Filter data based on visibility settings
+    const publicProfile = {
+      _id: user._id,
+      name: user.name,
+      username: user.username,
+      avatar: user.avatar,
+      bio: user.bio,
+      links: user.links,
+      // Conditionally include contact info
+      phone: user.isPhonePublic ? user.phone : undefined,
+      address: user.isAddressPublic ? user.address : undefined,
+      zipCode: user.isZipCodePublic ? user.zipCode : undefined,
+      createdAt: user.createdAt
+    };
+
     res.status(200).json({
       success: true,
-      data: user
+      data: publicProfile
     });
   } catch (err) {
     next(err);

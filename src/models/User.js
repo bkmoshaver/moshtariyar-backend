@@ -39,17 +39,33 @@ const UserSchema = new mongoose.Schema({
     required: false
   },
   // Profile fields
+  avatar: {
+    type: String,
+    default: ''
+  },
   address: {
     type: String,
     default: ''
+  },
+  isAddressPublic: {
+    type: Boolean,
+    default: false
   },
   phone: {
     type: String,
     default: ''
   },
+  isPhonePublic: {
+    type: Boolean,
+    default: false
+  },
   zipCode: {
     type: String,
     default: ''
+  },
+  isZipCodePublic: {
+    type: Boolean,
+    default: false
   },
   bio: {
     type: String,

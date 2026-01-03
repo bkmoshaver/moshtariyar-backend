@@ -98,10 +98,14 @@ exports.updateProfile = async (req, res, next) => {
       username: req.body.username,
       email: req.body.email,
       phone: req.body.phone,
+      isPhonePublic: req.body.isPhonePublic,
       address: req.body.address,
-      postalCode: req.body.postalCode,
+      isAddressPublic: req.body.isAddressPublic,
+      zipCode: req.body.zipCode,
+      isZipCodePublic: req.body.isZipCodePublic,
       bio: req.body.bio,
-      links: req.body.links
+      links: req.body.links,
+      avatar: req.body.avatar
     };
 
     // Remove undefined fields
