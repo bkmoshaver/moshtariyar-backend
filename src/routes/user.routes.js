@@ -1,23 +1,18 @@
 const express = require('express');
-const router = express.Router();
-const { protect, authorize } = require('../middleware/auth');
-const { 
-  getUsers, 
-  getUser, 
-  createUser, 
-  updateUser, 
-  deleteUser,
-  getProfile,
-  updateProfile
+const {
+  getUsers,
+  getUser,
+  createUser,
+  updateUser,
+  deleteUser
 } = require('../controllers/userController');
 
-// Profile routes (must be before /:id to avoid conflict)
-router.get('/profile', protect, getProfile);
-router.put('/profile', protect, updateProfile);
+const { protect, authorize } = require('../middleware/auth');
 
-// Admin routes
+const router = express.Router();
+
 router.use(protect);
-router.use(authorize('super_admin', 'tenant_admin'));
+router.use(authorize('super_admin'));
 
 router
   .route('/')

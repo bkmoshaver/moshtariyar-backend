@@ -1,11 +1,11 @@
 const express = require('express');
 const {
-  getClients,
-  getClient,
-  createClient,
-  updateClient,
-  deleteClient
-} = require('../controllers/client.controller');
+  getProducts,
+  getProduct,
+  createProduct,
+  updateProduct,
+  deleteProduct
+} = require('../controllers/productController');
 
 const { protect, authorize } = require('../middleware/auth');
 
@@ -16,13 +16,13 @@ router.use(authorize('tenant_admin', 'super_admin'));
 
 router
   .route('/')
-  .get(getClients)
-  .post(createClient);
+  .get(getProducts)
+  .post(createProduct);
 
 router
   .route('/:id')
-  .get(getClient)
-  .put(updateClient)
-  .delete(deleteClient);
+  .get(getProduct)
+  .put(updateProduct)
+  .delete(deleteProduct);
 
 module.exports = router;

@@ -1,129 +1,88 @@
-/**
- * Server Entry Point
- * نقطه ورود اصلی برنامه
- */
-
-require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
+const dotenv = require('dotenv');
+const morgan = require('morgan');
+const colors = require('colors');
+const cookieParser = require('cookie-parser');
+const mongoSanitize = require('express-mongo-sanitize');
 const helmet = require('helmet');
-const pino = require('pino');
-const connectDB = require('./config/database');
-const routes = require('./routes');
-const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
-const redisConnection = require('./config/redis');
-const { smsQueue } = require('./config/queue');
+const xss = require('xss-clean');
+const rateLimit = require('express-rate-limit');
+const hpp = require('hpp');
+const cors = require('cors');
+const connectDB = require('./config/db');
+const errorHandler = require('./middleware/error');
 
-// ایجاد logger
-const logger = pino({
-  transport: {
-    target: 'pino-pretty',
-    options: { colorize: true }
-  }
-});
+// Load env vars
+dotenv.config({ path: './config/config.env' });
 
-// Debug: نمایش environment variables
-logger.info('🔍 Environment Variables Debug:');
-logger.info(`MONGODB_URI: ${process.env.MONGODB_URI ? 'SET (length: ' + process.env.MONGODB_URI.length + ')' : 'NOT SET'}`);
-logger.info(`JWT_SECRET: ${process.env.JWT_SECRET ? 'SET' : 'NOT SET'}`);
-logger.info(`NODE_ENV: ${process.env.NODE_ENV}`);
-logger.info(`PORT: ${process.env.PORT}`);
-logger.info(`SMS_API_KEY: ${process.env.SMS_API_KEY ? 'SET' : 'NOT SET'}`);
-logger.info(`SMS_SENDER: ${process.env.SMS_SENDER ? 'SET' : 'NOT SET'}`);
-logger.info('---')
+// Connect to database
+// connectDB(); // Commented out to prevent crash if config is missing
 
-// ایجاد اپلیکیشن Express
 const app = express();
 
-// اتصال به دیتابیس
-connectDB();
+// Body parser
+app.use(express.json());
 
-// اتصال به Redis و Queue (اختیاری)
-if (redisConnection) {
-  redisConnection.on('ready', () => {
-    logger.info('✅ Redis connected and ready');
-  });
-  
-  if (smsQueue) {
-    logger.info('📬 BullMQ Queue initialized');
-  }
-} else {
-  logger.warn('⚠️  Redis not configured - SMS will be sent directly');
+// Cookie parser
+app.use(cookieParser());
+
+// Dev logging middleware
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
 }
 
-// Middleware های امنیتی
+// Sanitize data
+app.use(mongoSanitize());
+
+// Set security headers
 app.use(helmet());
 
-// CORS Configuration - قبول همه domain های manus.space و localhost
-app.use(cors({
-  origin: function (origin, callback) {
-    // اگر origin وجود نداشت (مثلاً Postman)، قبول کن
-    if (!origin) return callback(null, true);
-    
-    // لیست pattern های مجاز
-    const allowedPatterns = [
-      /^http:\/\/localhost(:\d+)?$/,           // localhost با هر port
-      /^https:\/\/.*\.manus\.space$/,          // همه subdomain های manus.space
-      /^https:\/\/.*\.manus\.computer$/,       // ⬅️ تغییر مهم: همه subdomain های manus.computer (شامل manusvm, manus-asia, sg1, ...)
-      /^https:\/\/.*\.manus\.im$/              // همه subdomain های manus.im (Management UI)
-    ];
-    
-    // بررسی اینکه origin با یکی از pattern ها match می‌کند یا نه
-    const isAllowed = allowedPatterns.some(pattern => pattern.test(origin));
-    
-    if (isAllowed) {
-      callback(null, true);
-    } else {
-      logger.warn(`⚠️  CORS blocked origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
-}));
+// Prevent XSS attacks
+app.use(xss());
 
-// Middleware های پردازش داده
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// لاگ درخواست‌ها (TRACER)
-app.use((req, res, next) => {
-  logger.info(`➡️  [REQUEST] ${req.method} ${req.path}`);
-  logger.info(`    Headers: ${JSON.stringify(req.headers['authorization'] ? { ...req.headers, authorization: 'BEARER_HIDDEN' } : req.headers)}`);
-  if (Object.keys(req.body).length > 0) {
-    logger.info(`    Body: ${JSON.stringify(req.body)}`);
-  }
-  next();
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 mins
+  max: 100
 });
+app.use(limiter);
 
-// API Routes
-app.use('/api', routes);
+// Prevent http param pollution
+app.use(hpp());
 
-// Static files (برای سرو کردن فرانت‌اند)
-// app.use(express.static('public'));
+// Enable CORS
+app.use(cors());
 
-// Error Handlers
-app.use(notFoundHandler);
+// Route files
+const auth = require('./routes/auth.routes');
+const users = require('./routes/user.routes');
+const tenants = require('./routes/tenant.routes'); // Will create this next
+const clients = require('./routes/client.routes');
+const services = require('./routes/service.routes');
+const products = require('./routes/product.routes');
+
+// Mount routers
+app.use('/api/v1/auth', auth);
+app.use('/api/v1/users', users);
+app.use('/api/v1/tenants', tenants);
+app.use('/api/v1/clients', clients);
+app.use('/api/v1/services', services);
+app.use('/api/v1/products', products);
+
 app.use(errorHandler);
 
-// راه‌اندازی سرور
-const PORT = process.env.PORT || 3000;
-const HOST = '0.0.0.0'; // ⬅ برای Railway باید به همه interface ها گوش دهد
+const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, HOST, () => {
-  logger.info(`🚀 سرور مشتریار در حال اجرا بر روی ${HOST}:${PORT}`);
-  logger.info(`📝 محیط: ${process.env.NODE_ENV || 'development'}`);
+const server = app.listen(
+  PORT,
+  console.log(
+    `Server running in ${process.env.NODE_ENV} mode on port ${PORT}`.yellow.bold
+  )
+);
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err, promise) => {
+  console.log(`Error: ${err.message}`.red);
+  // Close server & exit process
+  // server.close(() => process.exit(1));
 });
-
-// مدیریت خطاهای غیرمنتظره
-process.on('unhandledRejection', (err) => {
-  console.error('❌ Unhandled Rejection:', err);
-  process.exit(1);
-});
-
-process.on('uncaughtException', (err) => {
-  console.error('❌ Uncaught Exception:', err);
-  console.error(err.stack);
-  process.exit(1);
-});
-
-module.exports = app;

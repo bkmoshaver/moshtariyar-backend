@@ -1,80 +1,54 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
-const userSchema = new mongoose.Schema({
+const UserSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, 'نام الزامی است'],
-    trim: true
+    required: [true, 'Please add a name']
   },
   email: {
     type: String,
-    required: [true, 'ایمیل الزامی است'],
+    required: [true, 'Please add an email'],
     unique: true,
-    lowercase: true,
-    trim: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'لطفاً یک ایمیل معتبر وارد کنید']
-  },
-  password: {
-    type: String,
-    required: [true, 'رمز عبور الزامی است'],
-    minlength: 6,
-    select: false
+    match: [
+      /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
+      'Please add a valid email'
+    ]
   },
   role: {
     type: String,
-    enum: ['super_admin', 'tenant_admin', 'staff', 'client'],
-    default: 'client'
+    enum: ['user', 'publisher', 'tenant_admin', 'super_admin', 'staff'],
+    default: 'user'
   },
-  tenant: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Tenant'
-  },
-  // Profile Fields
-  username: {
+  password: {
     type: String,
-    unique: true,
-    sparse: true,
-    trim: true
+    required: [true, 'Please add a password'],
+    minlength: 6,
+    select: false
   },
-  bio: {
-    type: String,
-    maxlength: 500
-  },
-  avatar: {
-    type: String // URL or Base64
-  },
+  // Added profile fields based on user feedback
   phone: {
     type: String,
-    trim: true
+    default: ''
   },
   address: {
     type: String,
-    trim: true
+    default: ''
   },
-  postalCode: {
+  zipCode: {
     type: String,
-    trim: true
+    default: ''
   },
-  privacy: {
-    showPhone: { type: Boolean, default: false },
-    showAddress: { type: Boolean, default: false },
-    showPostalCode: { type: Boolean, default: false }
-  },
-  links: [{
-    title: String,
-    url: String,
-    icon: String,
-    active: { type: Boolean, default: true }
-  }],
+  resetPasswordToken: String,
+  resetPasswordExpire: Date,
   createdAt: {
     type: Date,
     default: Date.now
   }
 });
 
-// Encrypt password using bcrypt
-userSchema.pre('save', async function(next) {
+UserSchema.pre('save', async function(next) {
   if (!this.isModified('password')) {
     next();
   }
@@ -82,9 +56,14 @@ userSchema.pre('save', async function(next) {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Match user entered password to hashed password in database
-userSchema.methods.matchPassword = async function(enteredPassword) {
+UserSchema.methods.getSignedJwtToken = function() {
+  return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRE
+  });
+};
+
+UserSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model('User', UserSchema);

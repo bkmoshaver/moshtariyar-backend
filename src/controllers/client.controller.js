@@ -1,21 +1,41 @@
-const { successResponse, errorResponse, ErrorCodes } = require('../utils/errorResponse');
+const ErrorResponse = require('../utils/errorResponse');
 
 exports.getClients = async (req, res, next) => {
-  res.json(successResponse([], 'List of clients'));
+  try {
+    res.status(200).json({ success: true, data: [] });
+  } catch (err) {
+    next(err);
+  }
 };
 
 exports.getClient = async (req, res, next) => {
-  res.json(successResponse({}, 'Client details'));
+  try {
+    res.status(200).json({ success: true, data: {} });
+  } catch (err) {
+    next(err);
+  }
 };
 
 exports.createClient = async (req, res, next) => {
-  res.json(successResponse({}, 'Client created'));
+  try {
+    res.status(201).json({ success: true, data: req.body });
+  } catch (err) {
+    next(err);
+  }
 };
 
 exports.updateClient = async (req, res, next) => {
-  res.json(successResponse({}, 'Client updated'));
+  try {
+    res.status(200).json({ success: true, data: req.body });
+  } catch (err) {
+    next(err);
+  }
 };
 
 exports.deleteClient = async (req, res, next) => {
-  res.json(successResponse({}, 'Client deleted'));
+  try {
+    res.status(200).json({ success: true, data: {} });
+  } catch (err) {
+    next(err);
+  }
 };

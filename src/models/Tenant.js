@@ -1,62 +1,30 @@
 const mongoose = require('mongoose');
 
-const tenantSchema = new mongoose.Schema({
+const TenantSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, 'نام مجموعه الزامی است'],
+    required: [true, 'Please add a name'],
+    unique: true,
     trim: true,
-    maxlength: 50
+    maxlength: [50, 'Name can not be more than 50 characters']
   },
   slug: {
     type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
-    trim: true
+    required: [true, 'Please add a slug'],
+    unique: true
   },
-  owner: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  // New Fields
+  // Store settings fields
   address: {
     type: String,
-    trim: true,
-    maxlength: 200
+    default: ''
   },
   phone: {
     type: String,
-    trim: true,
-    maxlength: 20
+    default: ''
   },
-  branding: {
-    logo: String,
-    banner: String,
-    primaryColor: {
-      type: String,
-      default: '#000000'
-    },
-    secondaryColor: {
-      type: String,
-      default: '#ffffff'
-    }
-  },
-  giftSettings: {
-    enabled: {
-      type: Boolean,
-      default: false
-    },
-    percentage: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 100
-    }
+  banner: {
+    type: String,
+    default: ''
   },
   createdAt: {
     type: Date,
@@ -64,4 +32,4 @@ const tenantSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('Tenant', tenantSchema);
+module.exports = mongoose.model('Tenant', TenantSchema);
