@@ -1,37 +1,29 @@
 {
   "name": "moshtariyar-backend",
-  "version": "1.0.1",
-  "description": "مشتریار - سیستم مدیریت ارتباط با مشتری (CRM)",
+  "version": "1.0.0",
+  "description": "Moshtariyar Backend API",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js"
   },
-  "keywords": [
-    "crm",
-    "customer",
-    "management"
-  ],
-  "author": "Your Name",
-  "license": "MIT",
   "dependencies": {
-    "axios": "^1.13.2",
     "bcryptjs": "^2.4.3",
-    "bullmq": "^5.65.1",
+    "colors": "^1.4.0",
+    "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
+    "dotenv": "^16.0.3",
     "express": "^4.18.2",
-    "express-rate-limit": "^7.1.5",
-    "helmet": "^7.1.0",
-    "ioredis": "^5.8.2",
-    "joi": "^18.0.2",
-    "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.0.0",
-    "pino": "^8.16.2",
-    "pino-pretty": "^10.2.3",
-    "zod": "^3.22.4"
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^6.7.0",
+    "helmet": "^6.0.1",
+    "hpp": "^0.2.3",
+    "jsonwebtoken": "^9.0.0",
+    "mongoose": "^6.9.1",
+    "morgan": "^1.10.0",
+    "xss-clean": "^0.1.1"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "nodemon": "^2.0.20"
   }
 }

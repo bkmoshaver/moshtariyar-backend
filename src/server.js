@@ -18,6 +18,62 @@ app.use(express.json());
 // Enable CORS
 app.use(cors());
 
+// Optional modules (try-catch to prevent crash)
+try {
+  const morgan = require('morgan');
+  if (process.env.NODE_ENV === 'development') {
+    app.use(morgan('dev'));
+  }
+} catch (err) {
+  console.log('Morgan not found, skipping logging');
+}
+
+try {
+  const cookieParser = require('cookie-parser');
+  app.use(cookieParser());
+} catch (err) {
+  console.log('Cookie-parser not found, skipping');
+}
+
+try {
+  const mongoSanitize = require('express-mongo-sanitize');
+  app.use(mongoSanitize());
+} catch (err) {
+  console.log('Mongo-sanitize not found, skipping');
+}
+
+try {
+  const helmet = require('helmet');
+  app.use(helmet());
+} catch (err) {
+  console.log('Helmet not found, skipping');
+}
+
+try {
+  const xss = require('xss-clean');
+  app.use(xss());
+} catch (err) {
+  console.log('Xss-clean not found, skipping');
+}
+
+try {
+  const rateLimit = require('express-rate-limit');
+  const limiter = rateLimit({
+    windowMs: 10 * 60 * 1000, // 10 mins
+    max: 100
+  });
+  app.use(limiter);
+} catch (err) {
+  console.log('Rate-limit not found, skipping');
+}
+
+try {
+  const hpp = require('hpp');
+  app.use(hpp());
+} catch (err) {
+  console.log('Hpp not found, skipping');
+}
+
 // Route files
 const auth = require('./routes/auth.routes');
 const users = require('./routes/user.routes');
