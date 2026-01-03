@@ -7,6 +7,11 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please add a name']
   },
+  username: {
+    type: String,
+    unique: true,
+    sparse: true // Allows null/undefined values to be duplicated (for existing users)
+  },
   email: {
     type: String,
     required: [true, 'Please add an email'],
@@ -45,6 +50,14 @@ const UserSchema = new mongoose.Schema({
   zipCode: {
     type: String,
     default: ''
+  },
+  bio: {
+    type: String,
+    default: ''
+  },
+  links: {
+    type: [String],
+    default: []
   },
   resetPasswordToken: String,
   resetPasswordExpire: Date,

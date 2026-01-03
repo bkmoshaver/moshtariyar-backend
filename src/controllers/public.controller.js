@@ -37,10 +37,16 @@ exports.getPublicStore = async (req, res, next) => {
 // @access  Public
 exports.getPublicProfile = async (req, res, next) => {
   try {
-    // Find user by username (assuming username is unique)
-    // If username field doesn't exist, we might need to search by other means
-    // For now, let's assume we search by name or email part
-    const user = await User.findOne({ name: req.params.username }).select('-password');
+    // Try to find by username first, then fallback to name for legacy support
+    let user = await User.findOne({ username: req.params.username }).select('-password');
+    
+    if (!user) {
+      // Fallback: Try to find by name (case insensitive regex)
+      // This is risky if names are not unique, but helpful for legacy users without username
+      user = await User.findOne({ 
+        name: { $regex: new RegExp(`^${req.params.username}$`, 'i') } 
+      }).select('-password');
+    }
 
     if (!user) {
       return next(new ErrorResponse('Profile not found', 404));

@@ -4,13 +4,18 @@ const {
   getProduct,
   createProduct,
   updateProduct,
-  deleteProduct
+  deleteProduct,
+  getPublicProducts
 } = require('../controllers/productController');
 
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Public route for fetching products by store slug
+router.get('/public/:slug', getPublicProducts);
+
+// Protect all other routes
 router.use(protect);
 router.use(authorize('tenant_admin', 'super_admin', 'staff'));
 
