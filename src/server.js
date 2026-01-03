@@ -21,7 +21,7 @@ app.use(express.json());
 // Enable CORS
 app.use(cors());
 
-// Native Logging Middleware (No external package required)
+// Native Logging Middleware
 app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
@@ -88,15 +88,22 @@ const products = require('./routes/product.routes');
 const staff = require('./routes/staff.routes');
 const orders = require('./routes/order.routes');
 
-// Mount routers
-app.use('/api/v1/auth', auth);
-app.use('/api/v1/users', users);
-app.use('/api/v1/tenants', tenants);
-app.use('/api/v1/clients', clients);
-app.use('/api/v1/services', services);
-app.use('/api/v1/products', products);
-app.use('/api/v1/staff', staff);
-app.use('/api/v1/orders', orders);
+// Mount routers - Support BOTH /api/v1 and /api prefixes
+const routes = [
+  { path: '/auth', route: auth },
+  { path: '/users', route: users },
+  { path: '/tenants', route: tenants },
+  { path: '/clients', route: clients },
+  { path: '/services', route: services },
+  { path: '/products', route: products },
+  { path: '/staff', route: staff },
+  { path: '/orders', route: orders }
+];
+
+routes.forEach(({ path, route }) => {
+  app.use(`/api/v1${path}`, route); // Standard
+  app.use(`/api${path}`, route);    // Fallback for frontend mismatch
+});
 
 app.use(errorHandler);
 
