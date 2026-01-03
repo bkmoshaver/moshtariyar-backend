@@ -11,11 +11,10 @@ const { successResponse, errorResponse, ErrorCodes } = require('../utils/errorRe
 /**
  * ثبت‌نام مجموعه جدید (Onboarding)
  * POST /api/tenants/register
- * همزمان Tenant و User (Admin) می‌سازد
  */
 exports.registerTenant = async (req, res, next) => {
-  // const session = await mongoose.startSession();
-  // session.startTransaction();
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
     const { 
@@ -26,92 +25,104 @@ exports.registerTenant = async (req, res, next) => {
       phone         // شماره تماس (اختیاری)
     } = req.body;
 
-    // ۱. بررسی تکراری نبودن ایمیل
-    const existingUser = await User.findOne({ email });
+    // 1. بررسی تکراری بودن ایمیل
+    const existingUser = await User.findOne({ email }).session(session);
     if (existingUser) {
-      // await session.abortTransaction();
-      return res.status(400).json(
-        errorResponse(ErrorCodes.DUPLICATE_ENTRY, 'این ایمیل قبلاً ثبت شده است')
-      );
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json(errorResponse(ErrorCodes.DUPLICATE_ENTRY, 'این ایمیل قبلاً ثبت شده است'));
     }
 
-    // ۲. ایجاد مجموعه (Tenant)
-    const tenant = new Tenant({
-      name: businessName,
-      plan: {
-        type: 'free', // پلن پیش‌فرض رایگان
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // ۳۰ روز اعتبار اولیه
-      }
-    });
-    await tenant.save();
+    // 2. ساخت اسلاگ یکتا برای مجموعه
+    let slug = businessName.toLowerCase().replace(/\s+/g, '-');
+    // بررسی تکراری بودن اسلاگ (ساده)
+    const existingTenant = await Tenant.findOne({ slug }).session(session);
+    if (existingTenant) {
+      slug = `${slug}-${Date.now()}`;
+    }
 
-    // ۳. ایجاد مدیر مجموعه (Tenant Admin)
-    const user = new User({
+    // 3. ایجاد کاربر ادمین
+    const user = await User.create([{
       name,
       email,
       password,
       role: 'tenant_admin',
-      tenant: tenant._id // اتصال کاربر به مجموعه
-    });
-    await user.save();
+      phone // اگر شماره تماس در ثبت‌نام باشد
+    }], { session });
 
-    // await session.commitTransaction();
+    // 4. ایجاد مجموعه
+    const tenant = await Tenant.create([{
+      name: businessName,
+      slug,
+      owner: user[0]._id,
+      phone // شماره تماس مجموعه هم ست می‌شود
+    }], { session });
 
-    // ۴. ارسال پاسخ موفقیت
-    res.status(201).json(
-      successResponse({
-        tenant: {
-          id: tenant._id,
-          name: tenant.name,
-          plan: tenant.plan.type
-        },
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role
-        }
-      }, 'مجموعه شما با موفقیت ساخته شد')
-    );
+    // 5. آپدیت کاربر با ID مجموعه
+    user[0].tenant = tenant[0]._id;
+    await user[0].save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    // تولید توکن (ساده شده - در واقعیت باید از متد مدل یا سرویس auth استفاده شود)
+    // اینجا فرض می‌کنیم فرانت‌اند بعد از ثبت‌نام رایرکت می‌کند به لاگین
+    
+    res.status(201).json(successResponse({ 
+      tenant: tenant[0],
+      user: user[0]
+    }, 'مجموعه با موفقیت ایجاد شد'));
 
   } catch (error) {
-    // await session.abortTransaction();
+    await session.abortTransaction();
+    session.endSession();
     next(error);
-  } finally {
-    // session.endSession();
   }
 };
 
 /**
- * دریافت اطلاعات مجموعه (برای داشبورد)
+ * دریافت تنظیمات مجموعه فعلی
  * GET /api/tenants/me
  */
 exports.getCurrentTenant = async (req, res, next) => {
   try {
-    if (!req.tenant) {
-      return res.status(404).json(errorResponse(ErrorCodes.NOT_FOUND, 'مجموعه‌ای یافت نشد'));
+    // کاربر باید لاگین باشد و tenantId داشته باشد
+    const tenant = await Tenant.findById(req.user.tenant);
+    if (!tenant) {
+      return res.status(404).json(errorResponse(ErrorCodes.RESOURCE_NOT_FOUND, 'مجموعه یافت نشد'));
     }
-
-
-    
-    res.json(successResponse({ tenant: req.tenant }));
+    res.json(successResponse(tenant));
   } catch (error) {
     next(error);
   }
 };
 
 /**
- * به‌روزرسانی تنظیمات مجموعه
+ * آپدیت تنظیمات مجموعه
  * PUT /api/tenants/me
  */
 exports.updateTenant = async (req, res, next) => {
   try {
-    const { name, slug, address, phone, banner, branding, giftSettings } = req.body;
-    const tenant = req.tenant;
+    const { 
+      name, 
+      slug, 
+      branding, 
+      giftSettings,
+      address, // فیلد جدید
+      phone,   // فیلد جدید
+      banner   // فیلد جدید (اگر جداگانه ارسال شود)
+    } = req.body;
+
+    const tenant = await Tenant.findById(req.user.tenant);
+    if (!tenant) {
+      return res.status(404).json(errorResponse(ErrorCodes.RESOURCE_NOT_FOUND, 'مجموعه یافت نشد'));
+    }
 
     if (name) tenant.name = name;
-    if (address) tenant.address = address;
-    if (phone) tenant.phone = phone;
+    
+    // آپدیت فیلدهای جدید
+    if (address !== undefined) tenant.address = address;
+    if (phone !== undefined) tenant.phone = phone;
     
     // Check slug uniqueness if changed
     if (slug && slug !== tenant.slug) {
@@ -127,10 +138,12 @@ exports.updateTenant = async (req, res, next) => {
         ...tenant.branding,
         ...branding
       };
-      // اگر بنر مستقیماً در بادی ارسال شده باشد، آن را در برندینگ هم آپدیت می‌کنیم
-      if (banner) tenant.branding.banner = banner;
-    } else if (banner) {
-      // اگر برندینگ ارسال نشده اما بنر ارسال شده
+      // اگر بنر در برندینگ باشد که خودکار آپدیت می‌شود
+    }
+    
+    // اگر بنر جداگانه ارسال شده باشد (برای سازگاری)
+    if (banner) {
+      if (!tenant.branding) tenant.branding = {};
       tenant.branding.banner = banner;
     }
 
@@ -143,7 +156,7 @@ exports.updateTenant = async (req, res, next) => {
 
     await tenant.save();
 
-    res.json(successResponse({ tenant }, 'تنظیمات با موفقیت ذخیره شد'));
+    res.json(successResponse(tenant, 'تنظیمات با موفقیت ذخیره شد'));
   } catch (error) {
     next(error);
   }

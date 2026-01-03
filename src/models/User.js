@@ -1,8 +1,3 @@
-/**
- * User Model
- * مدل کاربر - برای احراز هویت ساده
- */
-
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -10,103 +5,86 @@ const userSchema = new mongoose.Schema({
   name: {
     type: String,
     required: [true, 'نام الزامی است'],
-    trim: true,
-    maxlength: [100, 'نام حداکثر 100 کاراکتر است']
+    trim: true
   },
-
   email: {
     type: String,
     required: [true, 'ایمیل الزامی است'],
     unique: true,
-    trim: true,
     lowercase: true,
-    match: [/^\S+@\S+\.\S+$/, 'ایمیل نامعتبر است']
+    trim: true,
+    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'لطفاً یک ایمیل معتبر وارد کنید']
   },
-
   password: {
     type: String,
     required: [true, 'رمز عبور الزامی است'],
-    minlength: [6, 'رمز عبور حداقل 6 کاراکتر باشد'],
+    minlength: 6,
     select: false
   },
-
+  role: {
+    type: String,
+    enum: ['super_admin', 'tenant_admin', 'staff', 'client'],
+    default: 'client'
+  },
+  tenant: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tenant'
+  },
+  // Profile Fields
   username: {
     type: String,
     unique: true,
     sparse: true,
-    trim: true,
-    lowercase: true,
-    minlength: 3,
-    maxlength: 30,
-    match: [/^[a-z0-9_]+$/, 'نام کاربری فقط می‌تواند شامل حروف انگلیسی، اعداد و زیرخط باشد']
+    trim: true
   },
-
   bio: {
     type: String,
-    maxlength: [500, 'بیوگرافی حداکثر 500 کاراکتر است'],
-    default: ''
+    maxlength: 500
   },
-
+  avatar: {
+    type: String // URL or Base64
+  },
+  phone: {
+    type: String,
+    trim: true
+  },
+  address: {
+    type: String,
+    trim: true
+  },
+  postalCode: {
+    type: String,
+    trim: true
+  },
+  privacy: {
+    showPhone: { type: Boolean, default: false },
+    showAddress: { type: Boolean, default: false },
+    showPostalCode: { type: Boolean, default: false }
+  },
   links: [{
     title: String,
     url: String,
     icon: String,
     active: { type: Boolean, default: true }
   }],
-
-  role: {
-    type: String,
-    enum: ['super_admin', 'tenant_admin', 'staff', 'client', 'user'], // user & admin kept for backward compatibility
-    default: 'client' // Changed from 'tenant_admin' to 'client' to avoid validation error on register
-  },
-
-  // ارتباط با مجموعه (برای Super Admin خالی است)
-  tenant: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Tenant',
-    required: function() {
-      // برای نقش‌های وابسته به مجموعه، این فیلد الزامی است
-      // نقش client و user نیازی به tenant ندارند
-      return ['tenant_admin', 'staff'].includes(this.role);
-    }
+  createdAt: {
+    type: Date,
+    default: Date.now
   }
-
-}, {
-  timestamps: true,
-  toJSON: { 
-    virtuals: true,
-    transform: function(doc, ret) {
-      delete ret.password;
-      return ret;
-    }
-  },
-  toObject: { virtuals: true }
 });
 
-/**
- * Hash کردن رمز عبور قبل از ذخیره
- */
+// Encrypt password using bcrypt
 userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
+  if (!this.isModified('password')) {
     next();
-  } catch (error) {
-    next(error);
   }
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
-/**
- * مقایسه رمز عبور
- */
-userSchema.methods.comparePassword = async function(candidatePassword) {
-  try {
-    return await bcrypt.compare(candidatePassword, this.password);
-  } catch (error) {
-    throw new Error('خطا در مقایسه رمز عبور');
-  }
+// Match user entered password to hashed password in database
+userSchema.methods.matchPassword = async function(enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
 };
 
 module.exports = mongoose.model('User', userSchema);
