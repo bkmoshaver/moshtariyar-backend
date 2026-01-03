@@ -1,67 +1,42 @@
-/**
- * Order Model
- * مدل سفارشات فروشگاه
- */
-
 const mongoose = require('mongoose');
 
-const orderSchema = new mongoose.Schema({
+const OrderSchema = new mongoose.Schema({
   tenant: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: mongoose.Schema.ObjectId,
     ref: 'Tenant',
     required: true
   },
-  
-  // اطلاعات مشتری (مهمان)
   customerName: {
     type: String,
-    required: [true, 'نام مشتری الزامی است'],
-    trim: true
+    required: [true, 'Please add customer name']
   },
   customerPhone: {
     type: String,
-    required: [true, 'شماره تماس مشتری الزامی است'],
-    trim: true
+    required: [true, 'Please add customer phone']
   },
-  
-  // اقلام سفارش
   items: [{
-    product: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Product',
-      required: true
-    },
-    title: String, // ذخیره نام محصول در لحظه خرید
-    price: Number, // ذخیره قیمت در لحظه خرید
-    quantity: {
-      type: Number,
-      required: true,
-      min: 1
+    name: String,
+    quantity: Number,
+    price: Number,
+    productId: {
+      type: mongoose.Schema.ObjectId,
+      ref: 'Product'
     }
   }],
-  
-  // مالی
   totalAmount: {
     type: Number,
-    required: true,
-    min: 0
+    required: true
   },
-  
-  // وضعیت
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'completed', 'cancelled'],
+    enum: ['pending', 'completed', 'cancelled'],
     default: 'pending'
   },
-  
-  note: {
-    type: String,
-    trim: true,
-    maxlength: 500
+  note: String,
+  createdAt: {
+    type: Date,
+    default: Date.now
   }
-
-}, {
-  timestamps: true
 });
 
-module.exports = mongoose.model('Order', orderSchema);
+module.exports = mongoose.model('Order', OrderSchema);

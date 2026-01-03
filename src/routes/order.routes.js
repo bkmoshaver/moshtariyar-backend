@@ -1,11 +1,9 @@
 const express = require('express');
 const {
-  getServices,
-  getService,
-  createService,
-  updateService,
-  deleteService
-} = require('../controllers/service.controller');
+  getOrders,
+  createOrder,
+  updateOrderStatus
+} = require('../controllers/order.controller');
 
 const { protect, authorize } = require('../middleware/auth');
 
@@ -16,13 +14,11 @@ router.use(authorize('tenant_admin', 'super_admin', 'staff'));
 
 router
   .route('/')
-  .get(getServices)
-  .post(createService);
+  .get(getOrders)
+  .post(createOrder);
 
 router
-  .route('/:id')
-  .get(getService)
-  .put(updateService)
-  .delete(deleteService);
+  .route('/:id/status')
+  .patch(updateOrderStatus);
 
 module.exports = router;

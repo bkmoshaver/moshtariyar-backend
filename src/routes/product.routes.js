@@ -12,7 +12,7 @@ const { protect, authorize } = require('../middleware/auth');
 const router = express.Router();
 
 router.use(protect);
-router.use(authorize('tenant_admin', 'super_admin'));
+router.use(authorize('tenant_admin', 'super_admin', 'staff'));
 
 router
   .route('/')
