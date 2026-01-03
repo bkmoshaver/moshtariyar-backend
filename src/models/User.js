@@ -18,7 +18,7 @@ const UserSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['user', 'publisher', 'tenant_admin', 'super_admin', 'staff'],
+    enum: ['user', 'staff', 'tenant_admin', 'super_admin'],
     default: 'user'
   },
   password: {
@@ -27,12 +27,18 @@ const UserSchema = new mongoose.Schema({
     minlength: 6,
     select: false
   },
-  // Added profile fields based on user feedback
-  phone: {
+  // Link user to a tenant (store)
+  tenant: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'Tenant',
+    required: false
+  },
+  // Profile fields
+  address: {
     type: String,
     default: ''
   },
-  address: {
+  phone: {
     type: String,
     default: ''
   },
@@ -48,20 +54,24 @@ const UserSchema = new mongoose.Schema({
   }
 });
 
+// Encrypt password using bcrypt
 UserSchema.pre('save', async function(next) {
   if (!this.isModified('password')) {
     next();
   }
+
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });
 
+// Sign JWT and return
 UserSchema.methods.getSignedJwtToken = function() {
   return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE
+    expiresIn: process.env.JWT_EXPIRE || '30d'
   });
 };
 
+// Match user entered password to hashed password in database
 UserSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };

@@ -84,6 +84,7 @@ const tenants = require('./routes/tenant.routes');
 const clients = require('./routes/client.routes');
 const services = require('./routes/service.routes');
 const products = require('./routes/product.routes');
+const staff = require('./routes/staff.routes'); // New route
 
 // Mount routers
 app.use('/api/v1/auth', auth);
@@ -92,6 +93,7 @@ app.use('/api/v1/tenants', tenants);
 app.use('/api/v1/clients', clients);
 app.use('/api/v1/services', services);
 app.use('/api/v1/products', products);
+app.use('/api/v1/staff', staff); // Mount staff route
 
 app.use(errorHandler);
 

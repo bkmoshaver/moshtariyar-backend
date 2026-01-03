@@ -1,132 +1,131 @@
-/**
- * Staff Controller
- * مدیریت پرسنل مجموعه
- */
-
+const ErrorResponse = require('../utils/errorResponse');
 const User = require('../models/User');
-const { successResponse, errorResponse, ErrorCodes } = require('../utils/errorResponse');
+const Tenant = require('../models/Tenant');
 
-/**
- * دریافت لیست پرسنل
- * GET /api/staff
- */
+// @desc      Get all staff for current tenant
+// @route     GET /api/v1/staff
+// @access    Private (Tenant Admin)
 exports.getStaff = async (req, res, next) => {
   try {
-    const staff = await User.find({
-      tenant: req.tenantId,
-      role: 'staff'
-    }).select('-password');
+    // Find the tenant associated with the current user
+    // For now, we assume the user is a tenant_admin and we find their tenant
+    // In a real app, req.user.tenant would be populated
+    
+    // Fallback: Find the first tenant (since we don't have full multi-tenancy yet)
+    const tenant = await Tenant.findOne();
+    
+    if (!tenant) {
+      return res.status(200).json({ success: true, count: 0, data: { staff: [] } });
+    }
 
-    res.json(successResponse({ staff }));
-  } catch (error) {
-    next(error);
+    // Find users who are staff or tenant_admin and linked to this tenant
+    // OR users who are staff/tenant_admin but not linked to any tenant (legacy)
+    const staff = await User.find({
+      role: { $in: ['staff', 'tenant_admin'] },
+      $or: [
+        { tenant: tenant._id },
+        { tenant: null } // Include legacy users for now
+      ]
+    });
+
+    // Transform data to match frontend expectation
+    const staffList = staff.map(user => ({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: staffList.length,
+      data: { staff: staffList }
+    });
+  } catch (err) {
+    next(err);
   }
 };
 
-/**
- * افزودن پرسنل جدید
- * POST /api/staff
- */
+// @desc      Create a new staff member
+// @route     POST /api/v1/staff
+// @access    Private (Tenant Admin)
 exports.createStaff = async (req, res, next) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
-    // بررسی تکراری نبودن ایمیل
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json(
-        errorResponse(ErrorCodes.DUPLICATE_ENTRY, 'این ایمیل قبلاً ثبت شده است')
-      );
+    // Find the tenant
+    const tenant = await Tenant.findOne();
+    if (!tenant) {
+      return next(new ErrorResponse('No tenant found', 404));
     }
 
-    const staff = new User({
+    // Create user
+    const user = await User.create({
       name,
       email,
       password,
-      role: 'staff',
-      tenant: req.tenantId
+      role: role || 'staff',
+      tenant: tenant._id
     });
 
-    await staff.save();
-
-    // حذف پسورد از خروجی
-    staff.password = undefined;
-
-    res.status(201).json(
-      successResponse({ staff }, 'پرسنل با موفقیت اضافه شد')
-    );
-  } catch (error) {
-    next(error);
+    res.status(201).json({
+      success: true,
+      data: user
+    });
+  } catch (err) {
+    next(err);
   }
 };
 
-/**
- * حذف پرسنل
- * DELETE /api/staff/:id
- */
+// @desc      Delete staff member
+// @route     DELETE /api/v1/staff/:id
+// @access    Private (Tenant Admin)
 exports.deleteStaff = async (req, res, next) => {
   try {
-    const staff = await User.findOneAndDelete({
-      _id: req.params.id,
-      tenant: req.tenantId,
-      role: 'staff'
-    });
+    const user = await User.findById(req.params.id);
 
-    if (!staff) {
-      return res.status(404).json(
-        errorResponse(ErrorCodes.NOT_FOUND, 'پرسنل یافت نشد')
-      );
+    if (!user) {
+      return next(new ErrorResponse(`No user with the id of ${req.params.id}`, 404));
     }
 
-    res.json(successResponse(null, 'پرسنل با موفقیت حذف شد'));
-  } catch (error) {
-    next(error);
+    // Prevent deleting yourself
+    if (user._id.toString() === req.user.id) {
+      return next(new ErrorResponse('You cannot delete yourself', 400));
+    }
+
+    await user.remove();
+
+    res.status(200).json({
+      success: true,
+      data: {}
+    });
+  } catch (err) {
+    next(err);
   }
 };
 
-/**
- * تغییر نقش پرسنل
- * PATCH /api/staff/:id/role
- */
+// @desc      Update staff role
+// @route     PATCH /api/v1/staff/:id/role
+// @access    Private (Tenant Admin)
 exports.updateStaffRole = async (req, res, next) => {
   try {
     const { role } = req.body;
     
-    // نقش‌های مجاز برای تغییر توسط مدیر مجموعه
-    const allowedRoles = ['staff', 'tenant_admin'];
-    
-    if (!allowedRoles.includes(role)) {
-      return res.status(400).json(
-        errorResponse(ErrorCodes.VALIDATION_ERROR, 'نقش انتخاب شده معتبر نیست')
-      );
-    }
-
-    const staff = await User.findOne({
-      _id: req.params.id,
-      tenant: req.tenantId
+    const user = await User.findByIdAndUpdate(req.params.id, { role }, {
+      new: true,
+      runValidators: true
     });
 
-    if (!staff) {
-      return res.status(404).json(
-        errorResponse(ErrorCodes.NOT_FOUND, 'کاربر یافت نشد')
-      );
+    if (!user) {
+      return next(new ErrorResponse(`No user with the id of ${req.params.id}`, 404));
     }
 
-    // جلوگیری از تغییر نقش خود کاربر توسط خودش (برای امنیت)
-    if (staff._id.toString() === req.user._id.toString()) {
-      return res.status(400).json(
-        errorResponse(ErrorCodes.ACCESS_DENIED, 'شما نمی‌توانید نقش خودتان را تغییر دهید')
-      );
-    }
-
-    staff.role = role;
-    await staff.save();
-
-    res.json(successResponse({ 
-      id: staff._id, 
-      role: staff.role 
-    }, 'نقش کاربر با موفقیت تغییر کرد'));
-  } catch (error) {
-    next(error);
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (err) {
+    next(err);
   }
 };
