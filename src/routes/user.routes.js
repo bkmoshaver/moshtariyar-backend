@@ -1,24 +1,33 @@
-/**
- * User Routes
- * مسیرهای کاربران ساده
- */
-
 const express = require('express');
 const router = express.Router();
-const userController = require('../controllers/userController'); // Fixed path
-const validate = require('../middleware/validate');
-const { registerUserSchema, loginUserSchema } = require('../validators/user.validator');
-const { authenticate, requireRole } = require('../middleware/auth');
+const { protect, authorize } = require('../middleware/auth');
+const { 
+  getUsers, 
+  getUser, 
+  createUser, 
+  updateUser, 
+  deleteUser,
+  getProfile,
+  updateProfile
+} = require('../controllers/userController');
 
-// مسیرهای پروفایل (برای همه کاربران لاگین شده)
-router.get('/profile', authenticate, userController.getProfile);
-router.put('/profile', authenticate, userController.updateProfile);
+// Profile routes (must be before /:id to avoid conflict)
+router.get('/profile', protect, getProfile);
+router.put('/profile', protect, updateProfile);
 
-// مسیرهای مدیریت کاربران (فقط ادمین و مدیر فروشگاه)
-// توجه: سوپر ادمین از مسیر /api/admin/users استفاده می‌کند
-router.get('/', authenticate, requireRole(['tenant_admin', 'admin']), userController.getUsers);
-router.post('/', authenticate, requireRole(['tenant_admin', 'admin']), userController.createUser);
-router.patch('/:id', authenticate, requireRole(['tenant_admin', 'admin']), userController.updateUser);
-router.delete('/:id', authenticate, requireRole(['tenant_admin', 'admin']), userController.deleteUser);
+// Admin routes
+router.use(protect);
+router.use(authorize('super_admin', 'tenant_admin'));
+
+router
+  .route('/')
+  .get(getUsers)
+  .post(createUser);
+
+router
+  .route('/:id')
+  .get(getUser)
+  .put(updateUser)
+  .delete(deleteUser);
 
 module.exports = router;
