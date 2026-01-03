@@ -5,7 +5,8 @@ const {
   createUser,
   updateUser,
   deleteUser,
-  updateProfile
+  updateProfile,
+  getProfile
 } = require('../controllers/userController');
 
 const { protect, authorize } = require('../middleware/auth');
@@ -15,7 +16,8 @@ const router = express.Router();
 // Protect all routes
 router.use(protect);
 
-// Public profile update route (authenticated users)
+// Profile routes (authenticated users)
+router.get('/profile', getProfile);
 router.put('/profile', updateProfile);
 
 // Admin only routes

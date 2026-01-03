@@ -73,6 +73,21 @@ exports.deleteUser = async (req, res, next) => {
   }
 };
 
+// @desc    Get current user profile
+// @route   GET /api/users/profile
+// @access  Private
+exports.getProfile = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id);
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // @desc    Update user profile (self)
 // @route   PUT /api/users/profile
 // @access  Private
@@ -80,6 +95,7 @@ exports.updateProfile = async (req, res, next) => {
   try {
     const fieldsToUpdate = {
       name: req.body.name,
+      username: req.body.username,
       email: req.body.email,
       phone: req.body.phone,
       address: req.body.address,
