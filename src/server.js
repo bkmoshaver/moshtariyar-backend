@@ -21,16 +21,17 @@ app.use(express.json());
 // Enable CORS
 app.use(cors());
 
-// Optional modules (try-catch to prevent crash)
-try {
-  const morgan = require('morgan');
-  if (process.env.NODE_ENV === 'development') {
-    app.use(morgan('dev'));
-  }
-} catch (err) {
-  console.log('Morgan not found, skipping logging');
-}
+// Native Logging Middleware (No external package required)
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    console.log(`${req.method} ${req.originalUrl} [${res.statusCode}] - ${duration}ms`);
+  });
+  next();
+});
 
+// Optional modules (try-catch to prevent crash)
 try {
   const cookieParser = require('cookie-parser');
   app.use(cookieParser());
@@ -85,7 +86,7 @@ const clients = require('./routes/client.routes');
 const services = require('./routes/service.routes');
 const products = require('./routes/product.routes');
 const staff = require('./routes/staff.routes');
-const orders = require('./routes/order.routes'); // New route
+const orders = require('./routes/order.routes');
 
 // Mount routers
 app.use('/api/v1/auth', auth);
@@ -95,7 +96,7 @@ app.use('/api/v1/clients', clients);
 app.use('/api/v1/services', services);
 app.use('/api/v1/products', products);
 app.use('/api/v1/staff', staff);
-app.use('/api/v1/orders', orders); // Mount orders route
+app.use('/api/v1/orders', orders);
 
 app.use(errorHandler);
 
