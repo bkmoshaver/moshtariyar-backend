@@ -87,6 +87,8 @@ const services = require('./routes/service.routes');
 const products = require('./routes/product.routes');
 const staff = require('./routes/staff.routes');
 const orders = require('./routes/order.routes');
+const settings = require('./routes/settings.routes');
+const publicRoutes = require('./routes/public.routes');
 
 // Mount routers - Support BOTH /api/v1 and /api prefixes
 const routes = [
@@ -97,7 +99,9 @@ const routes = [
   { path: '/services', route: services },
   { path: '/products', route: products },
   { path: '/staff', route: staff },
-  { path: '/orders', route: orders }
+  { path: '/orders', route: orders },
+  { path: '/settings', route: settings },
+  { path: '/public', route: publicRoutes }
 ];
 
 routes.forEach(({ path, route }) => {

@@ -1,28 +1,18 @@
-/**
- * Settings Routes
- * مسیرهای مدیریت تنظیمات
- */
-
 const express = require('express');
+const {
+  getSettings,
+  updateSettings
+} = require('../controllers/settings.controller');
+
+const { protect, authorize } = require('../middleware/auth');
+
 const router = express.Router();
-const settingsController = require('../controllers/settings.controller');
-const { authenticate } = require('../middleware/auth');
 
-// تمام مسیرها نیاز به احراز هویت دارند
-router.use(authenticate);
+router.use(protect);
 
-/**
- * @route   GET /api/settings
- * @desc    دریافت تنظیمات
- * @access  Private
- */
-router.get('/', settingsController.getSettings);
-
-/**
- * @route   PUT /api/settings
- * @desc    به‌روزرسانی تنظیمات
- * @access  Private
- */
-router.put('/', settingsController.updateSettings);
+router
+  .route('/')
+  .get(getSettings)
+  .put(authorize('tenant_admin', 'super_admin'), updateSettings);
 
 module.exports = router;

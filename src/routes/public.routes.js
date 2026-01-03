@@ -1,21 +1,12 @@
-/**
- * Public Routes
- * مسیرهای عمومی (بدون نیاز به لاگین)
- */
-
 const express = require('express');
+const {
+  getPublicStore,
+  getPublicProfile
+} = require('../controllers/public.controller');
+
 const router = express.Router();
-const publicController = require('../controllers/public.controller');
 
-// پروفایل کاربر
-router.get('/profile/:username', publicController.getUserProfile);
-router.get('/check-username/:username', publicController.checkUsername);
-
-// صفحه فروشگاه
-router.get('/store/:slug', publicController.getStorePage);
-router.get('/check-slug/:slug', publicController.checkSlug);
-
-// ثبت سفارش
-router.post('/orders', publicController.createOrder);
+router.get('/store/:slug', getPublicStore);
+router.get('/profile/:username', getPublicProfile);
 
 module.exports = router;
