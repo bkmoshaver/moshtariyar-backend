@@ -45,6 +45,30 @@ exports.getMe = async (req, res, next) => {
   }
 };
 
+exports.updateDetails = async (req, res, next) => {
+  try {
+    const fieldsToUpdate = {
+      name: req.body.name,
+      email: req.body.email,
+      phone: req.body.phone,
+      address: req.body.address,
+      zipCode: req.body.zipCode
+    };
+
+    const user = await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, {
+      new: true,
+      runValidators: true
+    });
+
+    res.status(200).json({
+      success: true,
+      data: user
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 const sendTokenResponse = (user, statusCode, res) => {
   const token = user.getSignedJwtToken();
   const options = {

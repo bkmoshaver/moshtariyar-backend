@@ -16,7 +16,7 @@ const errorHandler = require('./middleware/error');
 dotenv.config({ path: './config/config.env' });
 
 // Connect to database
-// connectDB(); // Commented out to prevent crash if config is missing
+connectDB();
 
 const app = express();
 
@@ -56,7 +56,7 @@ app.use(cors());
 // Route files
 const auth = require('./routes/auth.routes');
 const users = require('./routes/user.routes');
-const tenants = require('./routes/tenant.routes'); // Will create this next
+const tenants = require('./routes/tenant.routes');
 const clients = require('./routes/client.routes');
 const services = require('./routes/service.routes');
 const products = require('./routes/product.routes');
