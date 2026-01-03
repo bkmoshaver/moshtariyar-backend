@@ -12,6 +12,9 @@ connectDB();
 
 const app = express();
 
+// Trust proxy (required for Railway/Heroku/etc)
+app.set('trust proxy', 1);
+
 // Body parser
 app.use(express.json());
 
